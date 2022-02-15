@@ -1,4 +1,7 @@
-require("newrelic");
+// @ts-ignore
+import newrelic from "newrelic";
+// @ts-ignore
+import getCustomAttributes from "../getCustomAttributes.js";
 import express, { Request, Response } from "express";
 
 import { info, start, move, end } from "./logic";
@@ -17,6 +20,7 @@ app.post("/start", (req: Request, res: Response) => {
 });
 
 app.post("/move", (req: Request, res: Response) => {
+  newrelic.addCustomAttribute(getCustomAttributes(req.body));
   res.send(move(req.body));
 });
 
