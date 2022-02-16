@@ -20,7 +20,7 @@ app.post("/start", (req: Request, res: Response) => {
 });
 
 app.post("/move", (req: Request, res: Response) => {
-  newrelic.addCustomAttribute(getCustomAttributes(req.body));
+  newrelic.addCustomAttributes(getCustomAttributes(req.body));
   res.send(move(req.body));
 });
 
