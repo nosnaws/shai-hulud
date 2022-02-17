@@ -46,7 +46,9 @@ const getPossibleMoves = ({ you, board, game }: GameState): Move[] =>
       }
       return m;
     })
-    .filter((m) => m.x < board.width || m.y < board.height);
+    .filter(
+      (m) => m.x < board.width && m.y < board.height && m.x >= 0 && m.y >= 0
+    );
 
 const getMove = (move: Coord, state: GameState) => {
   const possibleMoves = getPossibleMoves(state);
