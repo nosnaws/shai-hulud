@@ -19,9 +19,11 @@
 import { GameState, Coord, Battlesnake } from "./types";
 
 const logStep = (text: string, thing: any) => {
-  //console.log(text);
-  if (thing) {
-    //console.log(thing);
+  if (process.env.LOG_LEVEL === "debug") {
+    console.log(text);
+    if (thing) {
+      console.log(thing);
+    }
   }
 };
 
@@ -69,7 +71,13 @@ export const aStar = (
     for (const neighbor of getNeighbors(current, gameState)) {
       logStep(`looking at neighbor`, neighbor);
 
-      const tentativeGScore = gScore[current.id] + 1; //manhattanDistance(current.coords, neighbor.coords);
+      const moveCost = gameState.board.hazards.some((c) =>
+        areCoordsEqual(neighbor.coords, c)
+      )
+        ? 16
+        : 1;
+
+      const tentativeGScore = gScore[current.id] + moveCost; //manhattanDistance(current.coords, neighbor.coords);
       logStep("tentative gScore", tentativeGScore);
 
       const neighborGScore = gScore[neighbor.id] ?? Infinity;
@@ -121,16 +129,23 @@ const getNeighbors = (space: Space, gameState: GameState): Space[] => {
   );
   //const largerSnakeHeads = largerSnakes.map(prop("head"));
   const legalNeighbors = neighbors
-    .filter(
-      ({ x, y }) =>
-        x >= 0 &&
-        x < gameState.board.width &&
-        y >= 0 &&
-        y < gameState.board.height
-    )
+    .map(fixWrappedMoves(gameState))
+    .filter(isLegalMove(gameState))
     .filter((n) => !isSnake(n, [gameState.you, ...largerSnakes]));
-
   return legalNeighbors.map((n) => createSpace(n, gameState));
+};
+
+const isLegalMove = (state: GameState) => ({ x, y }: Coord) =>
+  x >= 0 && x < state.board.width && y >= 0 && y < state.board.height;
+
+export const fixWrappedMoves = (state: GameState) => ({
+  x,
+  y,
+}: Coord): Coord => {
+  if (state.game.ruleset.name === "wrapped") {
+    return { x: x % state.board.width, y: y % state.board.height };
+  }
+  return { x, y };
 };
 
 interface Space {
@@ -215,7 +230,7 @@ const heuristics = (
     total += Infinity; // only a possible move for the enemy snake, so don't want Infinity
   }
 
-  total += manhattanDistance(current.coords, neighbor.coords);
+  //total += manhattanDistance(current.coords, neighbor.coords);
   //console.log(`${neighbor.id} is h ${total}`);
   return total;
 };

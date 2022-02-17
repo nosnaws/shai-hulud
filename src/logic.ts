@@ -29,17 +29,37 @@ export function move(gameState: GameState): MoveResponse {
     right: "right",
   };
 
-  const getMove = (coord: Coord, gameState: GameState) => {
-    const me = gameState.you.head;
-    if (coord.x === me.x && coord.y > me.y) {
-      return possibleMoves.up;
-    } else if (coord.x === me.x && coord.y < me.y) {
-      return possibleMoves.down;
-    } else if (coord.x > me.x && coord.y === me.y) {
-      return possibleMoves.right;
-    } else {
-      return possibleMoves.left;
+  const getMove = (move: Coord, gameState: GameState) => {
+    const head = gameState.you.head;
+
+    // head: x: 7, y: 10
+    // move: x: 7, y: 0
+    const possibleMoves = [
+      { x: head.x - 1, y: head.y, dir: "left" },
+      { x: head.x + 1, y: head.y, dir: "right" },
+      { x: head.x, y: head.y - 1, dir: "down" },
+      { x: head.x, y: head.y + 1, dir: "up" },
+    ].map((m) => {
+      const gameMode = gameState.game.ruleset.name;
+      const width = gameState.board.width;
+      const height = gameState.board.height;
+
+      if (gameMode === "wrapped") {
+        return { x: m.x % width, y: m.y % height, dir: m.dir };
+      }
+      return m;
+    });
+
+    const safeMove = possibleMoves.find(
+      (m) => m.x === move.x && m.y === move.y
+    );
+
+    if (!safeMove) {
+      console.log("move not found, going left");
+      return "left";
     }
+
+    return safeMove.dir;
   };
 
   const safeMoves = Object.keys(possibleMoves).filter(
