@@ -1,5 +1,5 @@
 import { InfoResponse, GameState, MoveResponse, Game, Coord } from "./types";
-import { aStar, manhattanDistance, areCoordsEqual } from "./a-star";
+import { aStar, manhattanDistance, areCoordsEqual, prop } from "./a-star";
 
 export function info(): InfoResponse {
   console.log("INFO");
@@ -22,77 +22,96 @@ export function end(gameState: GameState): void {
 }
 
 export function move(gameState: GameState): MoveResponse {
-  let possibleMoves: { [key: string]: string } = {
-    up: "up",
-    down: "down",
-    left: "left",
-    right: "right",
-  };
+  return calculateMove(gameState);
+}
 
-  const getMove = (move: Coord, gameState: GameState) => {
-    const head = gameState.you.head;
+interface Move extends Coord {
+  dir: string;
+}
 
-    // head: x: 7, y: 10
-    // move: x: 7, y: 0
-    const possibleMoves = [
-      { x: head.x - 1, y: head.y, dir: "left" },
-      { x: head.x + 1, y: head.y, dir: "right" },
-      { x: head.x, y: head.y - 1, dir: "down" },
-      { x: head.x, y: head.y + 1, dir: "up" },
-    ].map((m) => {
-      const gameMode = gameState.game.ruleset.name;
-      const width = gameState.board.width;
-      const height = gameState.board.height;
+const getPossibleMoves = ({ you, board, game }: GameState): Move[] =>
+  [
+    { x: you.head.x - 1, y: you.head.y, dir: "left" },
+    { x: you.head.x + 1, y: you.head.y, dir: "right" },
+    { x: you.head.x, y: you.head.y - 1, dir: "down" },
+    { x: you.head.x, y: you.head.y + 1, dir: "up" },
+  ]
+    .map((m) => {
+      const gameMode = game.ruleset.name;
+      const width = board.width;
+      const height = board.height;
 
       if (gameMode === "wrapped") {
         return { x: m.x % width, y: m.y % height, dir: m.dir };
       }
       return m;
-    });
+    })
+    .filter((m) => m.x < board.width && m.y < board.height);
 
-    const safeMove = possibleMoves.find(
-      (m) => m.x === move.x && m.y === move.y
+const getMove = (move: Coord, state: GameState) => {
+  const possibleMoves = getPossibleMoves(state);
+  const safeMove = possibleMoves.find((m) => m.x === move.x && m.y === move.y);
+
+  if (!safeMove) {
+    console.log("move not found, going left");
+    return "left";
+  }
+
+  return safeMove.dir;
+};
+
+const bumpers = (move: Coord, possibleMoves: Move[], { board }: GameState) => {
+  const snakes = board.snakes.flatMap(prop("body"));
+  const safeMoves = possibleMoves.filter(
+    (m) => !snakes.some((sb) => areCoordsEqual(m, sb))
+  );
+
+  const isSelectedMoveSafe = safeMoves.some((sm) => areCoordsEqual(sm, move));
+  if (!isSelectedMoveSafe) {
+    console.log(
+      `bumpers: selected move ${move.x},${move.y} is unsafe, randomly selecting a move`
     );
-
-    if (!safeMove) {
-      console.log("move not found, going left");
-      return "left";
+    const randomSafeMove =
+      safeMoves[Math.floor(Math.random() * safeMoves.length)];
+    if (randomSafeMove) {
+      console.log(
+        `bumpers: found random safe move ${randomSafeMove.x},${randomSafeMove.y}`
+      );
+      return randomSafeMove;
     }
 
-    return safeMove.dir;
-  };
+    console.log("bumpers: no safe moves available");
+  }
 
-  const safeMoves = Object.keys(possibleMoves).filter(
-    (key) => possibleMoves[key]
-  );
-  //const response: MoveResponse = {
-  //move: safeMoves[Math.floor(Math.random() * safeMoves.length)],
-  //}
+  console.log("bumpers: returning original move");
+  return move;
+};
 
-  const foods = gameState.board.food
+const calculateMove = (state: GameState) => {
+  const foods = state.board.food
     .map((f) => ({
       x: f.x,
       y: f.y,
-      distance: manhattanDistance(gameState.you.head, f),
+      distance: manhattanDistance(state.you.head, f),
     }))
     .sort((a, b) => a.distance - b.distance);
 
   for (const food of foods) {
-    const [move] = aStar(gameState, food);
+    const [move] = aStar(state, food);
 
-    if (areCoordsEqual(move.coords, gameState.you.head)) {
+    if (areCoordsEqual(move.coords, state.you.head)) {
       console.log(`food at ${move.id} unreachable`);
       continue;
     }
+
+    const safeMove = bumpers(move.coords, getPossibleMoves(state), state);
     const response: MoveResponse = {
-      move: getMove(move.coords, gameState),
+      move: getMove(safeMove, state),
     };
 
-    console.log(
-      `${gameState.game.id} MOVE ${gameState.turn}: ${response.move}`
-    );
+    console.log(`${state.game.id} MOVE ${state.turn}: ${response.move}`);
     return response;
   }
 
   return { move: "left" };
-}
+};
