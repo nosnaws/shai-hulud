@@ -116,14 +116,19 @@ const getNeighbors = (space: Space, gameState: GameState): Space[] => {
     { x: spaceCoords.x, y: spaceCoords.y + 1 },
   ];
 
-  const legalNeighbors = neighbors.filter(
-    ({ x, y }) =>
-      x >= 0 &&
-      x < gameState.board.width &&
-      y >= 0 &&
-      y < gameState.board.height
+  const largerSnakes = gameState.board.snakes.filter(
+    (s) => s.length >= gameState.you.length
   );
-  //.filter((n) => !isSnake(n, [gameState.you]));
+  //const largerSnakeHeads = largerSnakes.map(prop("head"));
+  const legalNeighbors = neighbors
+    .filter(
+      ({ x, y }) =>
+        x >= 0 &&
+        x < gameState.board.width &&
+        y >= 0 &&
+        y < gameState.board.height
+    )
+    .filter((n) => !isSnake(n, [gameState.you, ...largerSnakes]));
 
   return legalNeighbors.map((n) => createSpace(n, gameState));
 };
@@ -135,6 +140,10 @@ interface Space {
   hasSnakeHead: boolean;
   coords: Coord;
 }
+
+const isNeighborOf = (coord: Coord) => (maybeNeighbor: Coord) =>
+  Math.abs(coord.x - maybeNeighbor.x) + Math.abs(coord.y - maybeNeighbor.y) ===
+  1;
 
 const createSpace = (space: Coord, gameState: GameState): Space => {
   return {
@@ -170,14 +179,18 @@ const snakeLength = (
 };
 
 export const prop = <T, K extends keyof T>(key: K) => (obj: T) => obj[key];
+const areCoordsEqual = (a: Coord, b: Coord) => a.x === b.x && a.y === b.y;
 
 const heuristics = (
   current: Space,
   neighbor: Space,
   gameState: GameState
 ): number => {
-  const mySnakeLength = gameState.you.length;
+  const you = gameState.you;
   const snakes = gameState.board.snakes.flatMap(prop("body"));
+  const snakeheads = gameState.board.snakes
+    .map(prop("head"))
+    .filter((h) => !areCoordsEqual(h, you.head));
   const coord = neighbor.coords;
   let total = 0;
 
@@ -185,13 +198,24 @@ const heuristics = (
     total += Infinity;
   }
 
-  //if (isSnakeHead(space.coords, gameState)) {
-  //const length = snakeLength(space.coords, gameState);
-  //if (length && length < mySnakeLength) {
-  //return 5;
-  //}
-  //}
-  total += manhattanDistance(current.coords, neighbor.coords);
+  const possibleSnakes = snakeheads
+    .filter(isNeighborOf(coord))
+    .map((h) => snakeLength(h, gameState));
+  const possibleSnakeKills = possibleSnakes.filter(
+    (sl) => sl && sl < you.length
+  );
+  const possibleSnakeDeaths = possibleSnakes.filter(
+    (sl) => sl && sl >= you.length
+  );
 
+  if (possibleSnakeKills.length > 0) {
+    total += -100;
+  }
+  if (possibleSnakeDeaths.length > 0) {
+    total += Infinity; // only a possible move for the enemy snake, so don't want Infinity
+  }
+
+  total += manhattanDistance(current.coords, neighbor.coords);
+  //console.log(`${neighbor.id} is h ${total}`);
   return total;
 };

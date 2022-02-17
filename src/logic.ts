@@ -56,8 +56,8 @@ export function move(gameState: GameState): MoveResponse {
       distance: manhattanDistance(gameState.you.head, f),
     }))
     .sort((a, b) => a.distance - b.distance);
-
-  const [move, rest] = aStar(gameState, foods[0]);
+  const goal = foods[0]; //foods[Math.floor(Math.random() * foods.length)];
+  const [move, rest] = aStar(gameState, goal);
   const response: MoveResponse = {
     move: getMove(move.coords, gameState),
   };
