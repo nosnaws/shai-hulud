@@ -1,5 +1,5 @@
 import { InfoResponse, GameState, MoveResponse, Game, Coord } from "./types";
-import { aStar, manhattanDistance } from "./a-star";
+import { aStar, manhattanDistance, areCoordsEqual } from "./a-star";
 
 export function info(): InfoResponse {
   console.log("INFO");
@@ -76,12 +76,23 @@ export function move(gameState: GameState): MoveResponse {
       distance: manhattanDistance(gameState.you.head, f),
     }))
     .sort((a, b) => a.distance - b.distance);
-  const goal = foods[0]; //foods[Math.floor(Math.random() * foods.length)];
-  const [move, rest] = aStar(gameState, goal);
-  const response: MoveResponse = {
-    move: getMove(move.coords, gameState),
-  };
 
-  console.log(`${gameState.game.id} MOVE ${gameState.turn}: ${response.move}`);
-  return response;
+  for (const food of foods) {
+    const [move] = aStar(gameState, food);
+
+    if (areCoordsEqual(move.coords, gameState.you.head)) {
+      console.log(`food at ${move.id} unreachable`);
+      continue;
+    }
+    const response: MoveResponse = {
+      move: getMove(move.coords, gameState),
+    };
+
+    console.log(
+      `${gameState.game.id} MOVE ${gameState.turn}: ${response.move}`
+    );
+    return response;
+  }
+
+  return { move: "left" };
 }

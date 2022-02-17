@@ -130,8 +130,8 @@ const getNeighbors = (space: Space, gameState: GameState): Space[] => {
   //const largerSnakeHeads = largerSnakes.map(prop("head"));
   const legalNeighbors = neighbors
     .map(fixWrappedMoves(gameState))
-    .filter(isLegalMove(gameState))
-    .filter((n) => !isSnake(n, [gameState.you, ...largerSnakes]));
+    .filter(isLegalMove(gameState));
+  //.filter((n) => !isSnake(n, [gameState.you]));
   return legalNeighbors.map((n) => createSpace(n, gameState));
 };
 
@@ -194,7 +194,8 @@ const snakeLength = (
 };
 
 export const prop = <T, K extends keyof T>(key: K) => (obj: T) => obj[key];
-const areCoordsEqual = (a: Coord, b: Coord) => a.x === b.x && a.y === b.y;
+export const areCoordsEqual = (a: Coord, b: Coord) =>
+  a.x === b.x && a.y === b.y;
 
 const heuristics = (
   current: Space,
@@ -209,8 +210,9 @@ const heuristics = (
   const coord = neighbor.coords;
   let total = 0;
 
+  const deathCost = 1000;
   if (snakes.some((s) => s.x === coord.x && s.y === coord.y)) {
-    total += Infinity;
+    total += deathCost;
   }
 
   const possibleSnakes = snakeheads
@@ -227,7 +229,7 @@ const heuristics = (
     total += -100;
   }
   if (possibleSnakeDeaths.length > 0) {
-    total += Infinity; // only a possible move for the enemy snake, so don't want Infinity
+    total += deathCost; // only a possible move for the enemy snake, so don't want Infinity
   }
 
   //total += manhattanDistance(current.coords, neighbor.coords);
