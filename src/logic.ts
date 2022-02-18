@@ -1,8 +1,9 @@
 import { InfoResponse, GameState, MoveResponse, Game, Coord } from "./types";
 import { aStar, manhattanDistance, areCoordsEqual, prop } from "./a-star";
+import getLogger from "./logger";
 
+const logger = getLogger();
 export function info(): InfoResponse {
-  console.log("INFO");
   const response: InfoResponse = {
     apiversion: "1",
     author: "",
@@ -14,14 +15,15 @@ export function info(): InfoResponse {
 }
 
 export function start(gameState: GameState): void {
-  console.log(`${gameState.game.id} START`);
+  logger.info(`${gameState.game.id} START`);
 }
 
 export function end(gameState: GameState): void {
-  console.log(`${gameState.game.id} END\n`);
+  logger.info(`${gameState.game.id} END`);
 }
 
 export function move(gameState: GameState): MoveResponse {
+  logger.info(`${gameState.game.id} MOVE`);
   return calculateMove(gameState);
 }
 
@@ -55,7 +57,7 @@ const getMove = (move: Coord, state: GameState) => {
   const safeMove = possibleMoves.find((m) => m.x === move.x && m.y === move.y);
 
   if (!safeMove) {
-    console.log("move not found, going left");
+    logger.info(`${move.x},${move.y} not safe, going left`);
     return "left";
   }
 
@@ -70,22 +72,22 @@ const bumpers = (move: Coord, possibleMoves: Move[], { board }: GameState) => {
 
   const isSelectedMoveSafe = safeMoves.some((sm) => areCoordsEqual(sm, move));
   if (!isSelectedMoveSafe) {
-    console.log(
+    logger.info(
       `bumpers: selected move ${move.x},${move.y} is unsafe, randomly selecting a move`
     );
     const randomSafeMove =
       safeMoves[Math.floor(Math.random() * safeMoves.length)];
     if (randomSafeMove) {
-      console.log(
+      logger.info(
         `bumpers: found random safe move ${randomSafeMove.x},${randomSafeMove.y}`
       );
       return randomSafeMove;
     }
 
-    console.log("bumpers: no safe moves available");
+    logger.info("bumpers: no safe moves available");
   }
 
-  console.log("bumpers: returning original move");
+  logger.info("bumpers: returning original move");
   return move;
 };
 
@@ -102,7 +104,7 @@ const calculateMove = (state: GameState) => {
     const [move] = aStar(state, food);
 
     if (areCoordsEqual(move.coords, state.you.head)) {
-      console.log(`food at ${move.id} unreachable`);
+      logger.info(`food at ${move.id} unreachable`);
       continue;
     }
 
@@ -111,7 +113,7 @@ const calculateMove = (state: GameState) => {
       move: getMove(safeMove, state),
     };
 
-    console.log(`${state.game.id} MOVE ${state.turn}: ${response.move}`);
+    logger.info(`${state.game.id} MOVE ${state.turn}: ${response.move}`);
     return response;
   }
 

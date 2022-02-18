@@ -17,6 +17,9 @@
 //               else if this neighbor is not in both lists:
 //                   add it to the open list and set its g
 import { GameState, Coord, Battlesnake } from "./types";
+import getLogger from "./logger";
+
+const logger = getLogger();
 
 const logStep = (text: string, thing: any) => {
   if (process.env.LOG_LEVEL === "debug") {
@@ -32,7 +35,6 @@ export const aStar = (
   goal: Coord,
   h: Function = heuristics
 ) => {
-  console.log("start");
   const goalSpace = createSpace(goal, gameState);
   const start = createSpace(gameState.you.head, gameState);
 
@@ -50,7 +52,6 @@ export const aStar = (
   const fScore: { [index: string]: number } = {};
   fScore[start.id] = h(start, start, gameState);
 
-  console.log("entering loop");
   while (Object.keys(openSet).length > 0) {
     logStep("current openSet", openSet);
     logStep("f scores:", fScore);
@@ -93,7 +94,8 @@ export const aStar = (
       }
     }
   }
-  console.log("failed to find path");
+
+  logger.info("Failed to find path, returning start");
   return [start];
 };
 
@@ -156,7 +158,7 @@ interface Space {
   coords: Coord;
 }
 
-const isNeighborOf = (coord: Coord) => (maybeNeighbor: Coord) =>
+export const isNeighborOf = (coord: Coord) => (maybeNeighbor: Coord) =>
   Math.abs(coord.x - maybeNeighbor.x) + Math.abs(coord.y - maybeNeighbor.y) ===
   1;
 
@@ -183,7 +185,7 @@ const isSnakeHead = (coords: Coord, gameState: GameState): boolean =>
 const isFood = (coords: Coord, gameState: GameState): boolean =>
   doesExistOnCoord(coords, gameState.board.food);
 
-const snakeLength = (
+export const snakeLength = (
   coords: Coord,
   gameState: GameState
 ): number | undefined => {
