@@ -17,6 +17,7 @@
   "license": "MIT",
   "homepage": "https://github.com/BattlesnakeOfficial/starter-snake-typescript#readme",
   "dependencies": {
+    "@newrelic/winston-enricher": "^2.1.0",
     "@types/express": "^4.17.13",
     "@types/node": "^16.3.3",
     "express": "^4.17.1",

@@ -570,6 +570,13 @@
   resolved "https://registry.yarnpkg.com/@newrelic/superagent/-/superagent-5.1.0.tgz#4acbb9a7245d9f16a171532aa41278563f91c989"
   integrity sha512-2akEsdymaDlV3GEReNTXaSbweaOJNuazrw+C/MhiogdBk97PCs6+MgIVxR+o/i+eftOVyGd3f+3lubqNm3/0Nw==
 
+"@newrelic/winston-enricher@^2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@newrelic/winston-enricher/-/winston-enricher-2.1.0.tgz#627cc93894bff0aaa1009a60f047988815162c14"
+  integrity sha512-yfRK+lj8mUfSCqKQ0tot1Iloz+wU1upTf2YhQi5sSxYmV1RF6H6tQa8GHVDImTpOObQPX0BDAJJ7wL4mfy4lUw==
+  dependencies:
+    winston "^3.0.0"
+
 "@opencensus/core@0.0.9":
   version "0.0.9"
   resolved "https://registry.yarnpkg.com/@opencensus/core/-/core-0.0.9.tgz#b16f775435ee309433e4126af194d37313fc93b3"

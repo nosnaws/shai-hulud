@@ -1,11 +1,12 @@
 import winston from "winston";
 // @ts-ignore
 import NewrelicWinston from "winston-to-newrelic-logs";
+import newrelicFormatter from "@newrelic/winston-enricher";
 
 const createLogger = () => {
   const wLogger = winston.createLogger({
     level: "info",
-    format: winston.format.json(),
+    format: newrelicFormatter(),
     defaultMeta: { service: "shai-hulud" },
     transports: [
       new NewrelicWinston({
