@@ -10,8 +10,9 @@ const createLogger = () => {
     defaultMeta: { service: "shai-hulud" },
     transports: [
       new NewrelicWinston({
-        licenseKey: process.env.NEW_RELIC_LICENCE_KEY,
+        licenseKey: process.env.NEW_RELIC_LICENSE_KEY,
         apiUrl: "https://log-api.newrelic.com",
+        pluginOptions: {},
       }),
     ],
   });
