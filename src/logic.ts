@@ -127,33 +127,23 @@ const calculateMove = (state: GameState): MoveResponse => {
     goals = [...smallerSnakeHeads, ...goals];
   }
 
-  for (const goal of goals) {
-    logger.info(`goal: ${goal.x}, ${goal.y}`);
-    const [move] = aStar(state, goal);
+  const trace = (args: any) => {
+    console.dir(args);
+    return args;
+  };
 
-    if (areCoordsEqual(move.coords, head)) {
-      logger.info(`food at ${move.id} unreachable`);
-      continue;
-    }
+  const [bestMove]: Space[] = goals
+    .map((g) => aStar(state, g))
+    .sort((a, b) => a.length - b.length)
+    .map(([m]) => m)
+    .filter((m) => !areCoordsEqual(m.coords, head)) // remove failed paths
+    .filter((m) => !m.hasSnake)
+    .filter((m) => !m.isPossibleLargerSnakeHead);
 
-    if (move.hasSnake) {
-      logger.info(`${move.coords.x},${move.coords.y} has a snake, ignoring`);
-      continue;
-    }
-
-    if (move.isPossibleLargerSnakeHead) {
-      logger.info(
-        `${move.coords.x},${move.coords.y} potential larger snake move, ignoring`
-      );
-      continue;
-    }
-
-    const response: MoveResponse = {
-      move: getMove(move.coords, state),
-    };
-
-    return response;
+  if (bestMove) {
+    return { move: getMove(bestMove.coords, state) };
   }
+
   logger.info(`no usable moves from pathfinding`);
 
   const [randomMove] = getRandomSafeMove(head, state);
