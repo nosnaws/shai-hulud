@@ -30,11 +30,7 @@ const logStep = (text: string, thing: any) => {
   }
 };
 
-export const aStar = (
-  gameState: GameState,
-  goal: Coord,
-  h: Function = heuristics
-) => {
+export const aStar = (gameState: GameState, goal: Coord, h = heuristics) => {
   const goalSpace = createSpace(goal, gameState);
   const start = createSpace(gameState.you.head, gameState);
 
@@ -50,7 +46,7 @@ export const aStar = (
   gScore[start.id] = 0;
 
   const fScore: { [index: string]: number } = {};
-  fScore[start.id] = h(start, start, gameState);
+  fScore[start.id] = h(start, gameState);
 
   while (Object.keys(openSet).length > 0) {
     logStep("current openSet", openSet);
@@ -86,7 +82,7 @@ export const aStar = (
       if (tentativeGScore < neighborGScore) {
         cameFrom[neighbor.id] = current;
         gScore[neighbor.id] = tentativeGScore;
-        fScore[neighbor.id] = tentativeGScore + h(current, neighbor, gameState);
+        fScore[neighbor.id] = tentativeGScore + h(neighbor, gameState);
         if (!(neighbor.id in openSet)) {
           logStep("adding to openSet", neighbor);
           openSet[neighbor.id] = neighbor;
@@ -150,11 +146,13 @@ export const fixWrappedMoves = (state: GameState) => ({
   return { x, y };
 };
 
-interface Space {
+export interface Space {
   id: string;
   hasFood: boolean;
   hasSnake: boolean;
   hasSnakeHead: boolean;
+  isPossibleLargerSnakeHead: boolean;
+  isPossibleSmallerSnakeHead: boolean;
   coords: Coord;
 }
 
@@ -162,14 +160,51 @@ export const isNeighborOf = (coord: Coord) => (maybeNeighbor: Coord) =>
   Math.abs(coord.x - maybeNeighbor.x) + Math.abs(coord.y - maybeNeighbor.y) ===
   1;
 
-const createSpace = (space: Coord, gameState: GameState): Space => {
+export const createSpace = (coord: Coord, state: GameState): Space => {
   return {
-    id: `${space.x}${space.y}`,
-    coords: space,
-    hasFood: isFood(space, gameState),
-    hasSnake: isSnake(space, gameState.board.snakes),
-    hasSnakeHead: isSnakeHead(space, gameState),
+    id: `${coord.x}${coord.y}`,
+    coords: coord,
+    hasFood: isFood(coord, state),
+    hasSnake: isSnake(coord, state.board.snakes),
+    hasSnakeHead: isSnakeHead(coord, state),
+    isPossibleLargerSnakeHead: isPossibleLargerEnemyMove(coord, state),
+    isPossibleSmallerSnakeHead: isPossibleSmallerEnemyMove(coord, state),
   };
+};
+
+const potentialEnemyForCoord = (coord: Coord, { you, board }: GameState) => {
+  const enemySnakeheads = board.snakes
+    .map(prop("head"))
+    .filter((h) => !areCoordsEqual(h, you.head));
+
+  const possibleEnemyMoves = enemySnakeheads.filter(isNeighborOf(coord));
+
+  return possibleEnemyMoves;
+};
+
+const isPossibleLargerEnemyMove = (coord: Coord, state: GameState) => {
+  const possibleMoveSnakeLengths = potentialEnemyForCoord(
+    coord,
+    state
+  ).map((h) => snakeLength(h, state.board.snakes));
+
+  const possibleLargerSnake = possibleMoveSnakeLengths.filter(
+    (sl) => sl && sl >= state.you.length
+  );
+
+  return possibleLargerSnake.length > 0;
+};
+
+const isPossibleSmallerEnemyMove = (coord: Coord, state: GameState) => {
+  const possibleMoveSnakeLengths = potentialEnemyForCoord(
+    coord,
+    state
+  ).map((h) => snakeLength(h, state.board.snakes));
+
+  const possibleSmallerSnake = possibleMoveSnakeLengths.filter(
+    (sl) => sl && sl < state.you.length
+  );
+  return possibleSmallerSnake.length > 0;
 };
 
 const isSnake = (coords: Coord, snakes: Battlesnake[]): boolean =>
@@ -187,9 +222,9 @@ const isFood = (coords: Coord, gameState: GameState): boolean =>
 
 export const snakeLength = (
   coords: Coord,
-  gameState: GameState
+  snakes: Battlesnake[]
 ): number | undefined => {
-  const snake = gameState.board.snakes.find(
+  const snake = snakes.find(
     (s) => s.head.x === coords.x && s.head.y === coords.y
   );
   return snake ? snake.length : undefined;
@@ -199,16 +234,8 @@ export const prop = <T, K extends keyof T>(key: K) => (obj: T) => obj[key];
 export const areCoordsEqual = (a: Coord, b: Coord) =>
   a.x === b.x && a.y === b.y;
 
-const heuristics = (
-  current: Space,
-  neighbor: Space,
-  gameState: GameState
-): number => {
-  const you = gameState.you;
+const heuristics = (neighbor: Space, gameState: GameState): number => {
   const snakes = gameState.board.snakes.flatMap(prop("body"));
-  const snakeheads = gameState.board.snakes
-    .map(prop("head"))
-    .filter((h) => !areCoordsEqual(h, you.head));
   const coord = neighbor.coords;
   let total = 0;
 
@@ -217,20 +244,10 @@ const heuristics = (
     total += deathCost;
   }
 
-  const possibleSnakes = snakeheads
-    .filter(isNeighborOf(coord))
-    .map((h) => snakeLength(h, gameState));
-  const possibleSnakeKills = possibleSnakes.filter(
-    (sl) => sl && sl < you.length
-  );
-  const possibleSnakeDeaths = possibleSnakes.filter(
-    (sl) => sl && sl >= you.length
-  );
-
-  if (possibleSnakeKills.length > 0) {
+  if (neighbor.isPossibleSmallerSnakeHead) {
     total += -100;
   }
-  if (possibleSnakeDeaths.length > 0) {
+  if (neighbor.isPossibleLargerSnakeHead) {
     total += deathCost; // only a possible move for the enemy snake, so don't want Infinity
   }
 
