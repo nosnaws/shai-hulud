@@ -98,7 +98,20 @@ const getRandomDesperateMove = (coord: Coord, state: GameState): Space[] =>
 
 const calculateMove = (state: GameState): MoveResponse => {
   const head = state.you.head;
-  const foods = state.board.food
+  const length = state.you.length;
+  const health = state.you.health;
+  const muchSmallerSnakes = state.board.snakes
+    .filter((s) => !areCoordsEqual(s.head, head))
+    .filter((s) => s.length < length + 2);
+
+  const isKillingTime =
+    length > 10 && muchSmallerSnakes.length > 0 && health > 50;
+
+  let goals = state.board.food;
+  if (isKillingTime) {
+    goals = muchSmallerSnakes.map(prop("head"));
+  }
+  goals = goals
     .map((f) => ({
       x: f.x,
       y: f.y,
@@ -106,8 +119,8 @@ const calculateMove = (state: GameState): MoveResponse => {
     }))
     .sort((a, b) => a.distance - b.distance);
 
-  for (const food of foods) {
-    const [move] = aStar(state, food);
+  for (const goal of goals) {
+    const [move] = aStar(state, goal);
 
     if (areCoordsEqual(move.coords, head)) {
       logger.info(`food at ${move.id} unreachable`);
