@@ -123,10 +123,12 @@ const calculateMove = (state: GameState): MoveResponse => {
 
   let goals = foods;
   if (isKillingTime) {
+    logger.info(`entering aggressive mode`);
     goals = [...smallerSnakeHeads, ...goals];
   }
 
   for (const goal of goals) {
+    logger.info(`goal: ${goal.x}, ${goal.y}`);
     const [move] = aStar(state, goal);
 
     if (areCoordsEqual(move.coords, head)) {
