@@ -104,8 +104,8 @@ const calculateMove = (state: GameState): MoveResponse => {
     .filter((s) => !areCoordsEqual(s.head, head))
     .filter((s) => s.length < length + 2);
 
-  const isKillingTime =
-    length > 10 && muchSmallerSnakes.length > 0 && health > 50;
+  const isKillingTime = false;
+  //    length > 10 && muchSmallerSnakes.length > 0 && health > 50;
 
   const addDistance = (f: Coord) => ({
     x: f.x,
@@ -115,11 +115,11 @@ const calculateMove = (state: GameState): MoveResponse => {
   const distanceSort = (a: { distance: number }, b: { distance: number }) =>
     a.distance - b.distance;
 
-  const foods = state.board.food.map(addDistance).sort(distanceSort);
+  const foods = state.board.food;
   const smallerSnakeHeads = muchSmallerSnakes
     .map(prop("head"))
-    .map(addDistance)
-    .sort(distanceSort);
+    .flatMap((h) => getPossibleMoves(h, state))
+    .filter((g) => !areCoordsEqual(g, head));
 
   let goals = foods;
   if (isKillingTime) {
@@ -131,6 +131,10 @@ const calculateMove = (state: GameState): MoveResponse => {
     console.dir(args);
     return args;
   };
+  const possibleSafeMovesForSpace = (space: Space, state: GameState) =>
+    getPossibleMoves(space.coords, state)
+      .map((m) => createSpace(m, state))
+      .map((pm) => !pm.hasSnake && !pm.isPossibleLargerSnakeHead);
 
   const [bestMove]: Space[] = goals
     .map((g) => aStar(state, g))
@@ -138,7 +142,10 @@ const calculateMove = (state: GameState): MoveResponse => {
     .map(([m]) => m)
     .filter((m) => !areCoordsEqual(m.coords, head)) // remove failed paths
     .filter((m) => !m.hasSnake)
-    .filter((m) => !m.isPossibleLargerSnakeHead);
+    .filter((m) => !m.isPossibleLargerSnakeHead)
+    .filter(
+      (m) => possibleSafeMovesForSpace(m, state).length > 0 // ensure we won't get stuck ...less
+    );
 
   if (bestMove) {
     return { move: getMove(bestMove.coords, state) };
