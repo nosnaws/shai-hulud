@@ -136,7 +136,7 @@ const calculateMove = (state: GameState): MoveResponse => {
   const possibleSafeMovesForSpace = (space: Space, state: GameState) =>
     getPossibleMoves(space.coords, state)
       .map((m) => createSpace(m, state))
-      .map((pm) => !pm.hasSnake && !pm.isPossibleLargerSnakeHead);
+      .filter((pm) => !pm.hasSnake && !pm.isPossibleLargerSnakeHead);
 
   const [bestMove]: Space[] = goals
     .map((g) => aStar(state, g))
@@ -154,7 +154,9 @@ const calculateMove = (state: GameState): MoveResponse => {
 
   logger.info(`no usable moves from pathfinding`);
 
-  const [randomMove] = getRandomSafeMove(head, state);
+  const [randomMove] = getRandomSafeMove(head, state).filter(
+    (m) => possibleSafeMovesForSpace(m, state).length > 0
+  );
   if (randomMove) {
     logger.info(`randomly selected safe move`);
     return { move: getMove(randomMove.coords, state) };
