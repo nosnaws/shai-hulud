@@ -5,6 +5,7 @@ import {
   areCoordsEqual,
   prop,
   createSpace,
+  Space,
 } from "./a-star";
 import getLogger from "./logger";
 
@@ -28,9 +29,11 @@ export function end(gameState: GameState): void {
   logger.info(`${gameState.game.id} END`);
 }
 
-export function move(gameState: GameState): MoveResponse {
-  logger.info(`${gameState.game.id} MOVE`);
-  return calculateMove(gameState);
+export function move(state: GameState): MoveResponse {
+  logger.info(`${state.game.id} MOVE`);
+  const moveRes = calculateMove(state);
+  logger.info(`${state.game.id} MOVE ${state.turn}: ${moveRes.move}`);
+  return moveRes;
 }
 
 interface Move extends Coord {
@@ -62,21 +65,36 @@ const getPossibleMoves = (
     );
 
 const getMove = (move: Coord, state: GameState) => {
-  const possibleMoves = getPossibleMoves(state.you.head, state);
-  const safeMove = possibleMoves.find((m) => m.x === move.x && m.y === move.y);
+  if (move) {
+    const possibleMoves = getPossibleMoves(state.you.head, state);
+    const possibleMove = possibleMoves.find(
+      (m) => m.x === move.x && m.y === move.y
+    );
 
-  if (!safeMove) {
-    logger.info(`${move.x},${move.y} not safe, going left`);
-    return "left";
+    if (possibleMove) {
+      return possibleMove.dir;
+    }
   }
+  logger.info(`selected move not possible, going left`);
 
-  return safeMove.dir;
+  return "left";
 };
 
-const getRandomSafeMove = (coord: Coord, state: GameState) =>
-  getPossibleMoves(coord, state)
-    .map((m) => createSpace(m, state))
-    .filter((s) => !s.hasSnake && !s.isPossibleLargerSnakeHead);
+const shuffle = <T>(array: Array<T>): Array<T> =>
+  array.sort(() => 0.5 - Math.random());
+
+const getPossibleSpaces = (coord: Coord, state: GameState) =>
+  getPossibleMoves(coord, state).map((m) => createSpace(m, state));
+
+const getRandomSafeMove = (coord: Coord, state: GameState): Space[] =>
+  shuffle(
+    getPossibleSpaces(coord, state).filter(
+      (s) => !s.hasSnake && !s.isPossibleLargerSnakeHead
+    )
+  );
+
+const getRandomDesperateMove = (coord: Coord, state: GameState): Space[] =>
+  shuffle(getPossibleSpaces(coord, state).filter((s) => !s.hasSnake));
 
 const calculateMove = (state: GameState): MoveResponse => {
   const head = state.you.head;
@@ -103,36 +121,27 @@ const calculateMove = (state: GameState): MoveResponse => {
 
     if (move.isPossibleLargerSnakeHead) {
       logger.info(
-        `${move.coords.x},${move.coords.y} potential larger snake move`
+        `${move.coords.x},${move.coords.y} potential larger snake move, ignoring`
       );
-
-      if (Math.random() < 0.8) {
-        logger.info(`ignoring ${move.coords.x},${move.coords.y}`);
-        continue;
-      } else {
-        // TODO: probably want to consider all paths before risking a potential collision
-        logger.info(
-          `selected ${move.coords.x},${move.coords.y} risking it for the biscuit`
-        );
-      }
+      continue;
     }
 
     const response: MoveResponse = {
       move: getMove(move.coords, state),
     };
 
-    logger.info(`${state.game.id} MOVE ${state.turn}: ${response.move}`);
     return response;
   }
+  logger.info(`no usable moves from pathfinding`);
 
   const [randomMove] = getRandomSafeMove(head, state);
   if (randomMove) {
-    logger.info(
-      `no usable moves from pathfinding, randomly selected ${randomMove.coords.x},${randomMove.coords.y}`
-    );
+    logger.info(`randomly selected safe move`);
     return { move: getMove(randomMove.coords, state) };
   }
 
-  logger.info(`no safe moves, going left`);
-  return { move: "left" };
+  const [desperateMove] = getRandomDesperateMove(head, state);
+  logger.info(`randomly selected desperate move`);
+
+  return { move: getMove(desperateMove?.coords, state) };
 };
