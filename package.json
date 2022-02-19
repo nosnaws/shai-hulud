@@ -19,6 +19,7 @@
   "dependencies": {
     "@newrelic/winston-enricher": "^2.1.0",
     "@types/express": "^4.17.13",
+    "@types/newrelic": "^7.0.3",
     "@types/node": "^16.3.3",
     "express": "^4.17.1",
     "newrelic": "^8.7.1",

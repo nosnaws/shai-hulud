@@ -1,4 +1,3 @@
-// @ts-ignore
 import newrelic from "newrelic";
 // @ts-ignore
 import getCustomAttributes from "../utils/getCustomAttributes.js";
