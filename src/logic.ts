@@ -106,7 +106,7 @@ const calculateMove = (state: GameState): MoveResponse => {
         `${move.coords.x},${move.coords.y} potential larger snake move`
       );
 
-      if (Math.random() < 0.5) {
+      if (Math.random() < 0.8) {
         logger.info(`ignoring ${move.coords.x},${move.coords.y}`);
         continue;
       } else {
