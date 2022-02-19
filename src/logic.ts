@@ -115,11 +115,13 @@ const calculateMove = (state: GameState): MoveResponse => {
   const distanceSort = (a: { distance: number }, b: { distance: number }) =>
     a.distance - b.distance;
 
-  const foods = state.board.food;
+  const foods = state.board.food.map(addDistance).sort(distanceSort);
   const smallerSnakeHeads = muchSmallerSnakes
     .map(prop("head"))
     .flatMap((h) => getPossibleMoves(h, state))
-    .filter((g) => !areCoordsEqual(g, head));
+    .filter((g) => !areCoordsEqual(g, head))
+    .map(addDistance)
+    .sort(distanceSort);
 
   let goals = foods;
   if (isKillingTime) {
@@ -138,7 +140,6 @@ const calculateMove = (state: GameState): MoveResponse => {
 
   const [bestMove]: Space[] = goals
     .map((g) => aStar(state, g))
-    .sort((a, b) => a.length - b.length)
     .map(([m]) => m)
     .filter((m) => !areCoordsEqual(m.coords, head)) // remove failed paths
     .filter((m) => !m.hasSnake)
