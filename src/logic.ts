@@ -1,3 +1,4 @@
+import newrelic from "newrelic";
 import { InfoResponse, GameState, MoveResponse, Game, Coord } from "./types";
 import {
   aStar,
@@ -21,17 +22,31 @@ export function info(): InfoResponse {
   return response;
 }
 
-export function start(gameState: GameState): void {
-  logger.info(`${gameState.game.id} START`);
+const transactions = new Map();
+export function start(state: GameState): void {
+  logger.info(`${state.game.id} START`);
+
+  const gameId = state.game.id;
+  newrelic.startBackgroundTransaction("game", "logic", () => null);
+  transactions.set(gameId, newrelic.getTransaction());
 }
 
-export function end(gameState: GameState): void {
-  logger.info(`${gameState.game.id} END`);
+export function end(state: GameState): void {
+  logger.info(`${state.game.id} END`);
+
+  const gameId = state.game.id;
+  const transaction = transactions.get(gameId);
+  if (transaction) {
+    transactions.delete(gameId);
+    transaction.end();
+  }
 }
 
 export function move(state: GameState): MoveResponse {
   logger.info(`${state.game.id} MOVE`);
-  const moveRes = calculateMove(state);
+  const moveRes = newrelic.startSegment("calculateMove", true, () =>
+    calculateMove(state)
+  );
   logger.info(`${state.game.id} MOVE ${state.turn}: ${moveRes.move}`);
   return moveRes;
 }
