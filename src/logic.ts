@@ -107,17 +107,24 @@ const calculateMove = (state: GameState): MoveResponse => {
   const isKillingTime =
     length > 10 && muchSmallerSnakes.length > 0 && health > 50;
 
-  let goals = state.board.food;
+  const addDistance = (f: Coord) => ({
+    x: f.x,
+    y: f.y,
+    distance: manhattanDistance(head, f),
+  });
+  const distanceSort = (a: { distance: number }, b: { distance: number }) =>
+    a.distance - b.distance;
+
+  const foods = state.board.food.map(addDistance).sort(distanceSort);
+  const smallerSnakeHeads = muchSmallerSnakes
+    .map(prop("head"))
+    .map(addDistance)
+    .sort(distanceSort);
+
+  let goals = foods;
   if (isKillingTime) {
-    goals = muchSmallerSnakes.map(prop("head"));
+    goals = [...smallerSnakeHeads, ...goals];
   }
-  goals = goals
-    .map((f) => ({
-      x: f.x,
-      y: f.y,
-      distance: manhattanDistance(head, f),
-    }))
-    .sort((a, b) => a.distance - b.distance);
 
   for (const goal of goals) {
     const [move] = aStar(state, goal);
