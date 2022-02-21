@@ -230,7 +230,7 @@ export const snakeLength = (
   return snake ? snake.length : undefined;
 };
 
-export const prop = <T, K extends keyof T>(key: K) => (obj: T) => obj[key];
+const prop = <T, K extends keyof T>(key: K) => (obj: T) => obj[key];
 export const areCoordsEqual = (a: Coord, b: Coord) =>
   a.x === b.x && a.y === b.y;
 

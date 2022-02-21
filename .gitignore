@@ -5,3 +5,5 @@
 
 node_modules
 build
+newrelic_agent.log
+yarn-error.log
