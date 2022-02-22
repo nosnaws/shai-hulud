@@ -1,26 +1,31 @@
 import { v4 as uuid } from "uuid";
 import { Coord, Battlesnake, Board, GameState, Game } from "../src/types";
 
-export const createGameState = (board: Board, you: Battlesnake): GameState => {
+export const createGameState = (
+  board: Board,
+  you: Battlesnake,
+  turn = 1
+): GameState => {
   return {
     board,
     you,
     game: createGame(),
-    turn: 1,
+    turn,
   };
 };
 
 export const createBoard = (
   size: number,
   food: Coord[] = [],
-  snakes: Battlesnake[] = []
+  snakes: Battlesnake[] = [],
+  hazards: Coord[] = []
 ): Board => {
   return {
     height: size,
     width: size,
     food: food,
     snakes,
-    hazards: [],
+    hazards: hazards,
   };
 };
 

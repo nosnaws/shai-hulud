@@ -98,8 +98,11 @@ const nodeHeuristic = (
     total += -10000;
   }
 
-  if (node.hasSnakeTail && canSnakeEat(grid, snakes, node.coord, isWrapped)) {
-    total += -1000;
+  if (node.hasSnakeTail) {
+    const s = findSnake(snakes, node.coord);
+    if (s && didSnakeEat(s.body)) {
+      total += -10000;
+    }
   }
 
   if (node.hasHazard) {
@@ -129,20 +132,14 @@ const nodeHeuristic = (
   return total;
 };
 
-const canSnakeEat = (
-  grid: Grid,
-  snakes: Battlesnake[],
-  tail: Coord,
-  isWrapped: boolean
-): boolean => {
-  const snake = snakes.find((s) => isCoordEqual(s.body[s.length - 1])(tail));
-
-  if (snake) {
-    const possibleSnakeMoves = getMoves(grid, snake.body, isWrapped);
-    return possibleSnakeMoves.some((m) => m.hasFood);
-  }
-  return false;
+const didSnakeEat = (body: Coord[]): boolean => {
+  const last = body[body.length - 1];
+  const secondToLast = body[body.length - 2];
+  return last && secondToLast && isCoordEqual(last)(secondToLast);
 };
+
+const findSnake = (snakes: Battlesnake[], tail: Coord) =>
+  snakes.find((s) => isCoordEqual(s.body[s.length - 1])(tail));
 
 export const determineMove = (state: GameState): Coord => {
   const board = state.board;

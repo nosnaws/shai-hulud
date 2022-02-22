@@ -321,12 +321,12 @@ describe("alphabeta", () => {
       expect(move).toEqual({ x: 4, y: 2 });
     });
 
-    it("does not choose path through moving tail if snake can eat", () => {
+    it("does not choose path through moving tail if snake did eat", () => {
       // _ _ _ _ _
       // _ _ _ _ _
       // _ e e e e
       // _ e s s h
-      // f k _ _ _
+      // _ k _ _ _
       // h = my head, k = enemy head
 
       const me = createSnake([
@@ -341,11 +341,9 @@ describe("alphabeta", () => {
         { x: 2, y: 2 },
         { x: 3, y: 2 },
         { x: 4, y: 2 },
+        { x: 4, y: 2 }, // denotes eating last turn
       ]);
-      const gameState = createGameState(
-        createBoard(5, [{ x: 0, y: 0 }], [me, other]),
-        me
-      );
+      const gameState = createGameState(createBoard(5, [], [me, other]), me);
       const move = determineMove(gameState);
       expect(move).toEqual({ x: 4, y: 0 });
     });
@@ -406,6 +404,90 @@ describe("alphabeta", () => {
       const gameState = createGameState(createBoard(11, food, [me, other]), me);
       const move = determineMove(gameState);
       expect(move).toEqual({ x: 6, y: 2 });
+    });
+
+    it.skip("chooses life over zoning", () => {
+      // _ _ _ _ _ _ f _ _ _ _
+      // _ _ _ _ _ _ _ _ f _ _
+      // f f _ _ _ _ _ _ _ _ _
+      // _ _ _ f _ s _ _ _ _ _
+      // _ _ _ h s s _ _ _ _ _
+      // _ _ _ _ k e _ _ _ _ e
+      // _ _ _ _ _ e e e e e e
+      // _ _ _ _ f _ _ _ _ _ _
+      // _ f _ _ _ _ f _ _ _ _
+      // _ _ _ f _ _ _ _ f f f
+      // _ _ _ _ _ _ _ _ _ _ _
+      // h = my head, x = hazard
+
+      const me = createSnake(
+        [
+          { x: 4, y: 6 },
+          { x: 5, y: 6 },
+          { x: 6, y: 6 },
+          { x: 6, y: 7 },
+        ],
+        { health: 3 }
+      );
+      const snake2 = createSnake(
+        [
+          { x: 4, y: 5 },
+          { x: 5, y: 5 },
+          { x: 5, y: 4 },
+          { x: 6, y: 4 },
+          { x: 7, y: 4 },
+          { x: 8, y: 4 },
+          { x: 9, y: 4 },
+          { x: 10, y: 4 },
+          { x: 10, y: 5 },
+        ],
+        { health: 98 }
+      );
+      const food = [
+        { x: 0, y: 8 },
+        { x: 1, y: 8 },
+        { x: 1, y: 2 },
+        { x: 3, y: 7 },
+        { x: 3, y: 1 },
+        { x: 4, y: 3 },
+        { x: 6, y: 10 },
+        { x: 6, y: 2 },
+        { x: 8, y: 9 },
+        { x: 8, y: 1 },
+        { x: 10, y: 1 },
+        { x: 8, y: 1 },
+      ];
+      const gameState = createGameState(
+        createBoard(11, food, [me, snake2]),
+        me,
+        109
+      );
+      const move = determineMove(gameState);
+      expect(move).toEqual({ x: 4, y: 7 });
+    });
+
+    it("does not choose death by hazard", () => {
+      // _ _ _ _ f
+      // _ _ _ _ x
+      // _ _ _ _ h
+      // _ _ _ _ s
+      // _ _ _ _ _
+      // h = my head, x = hazard
+
+      const me = createSnake(
+        [
+          { x: 4, y: 2 },
+          { x: 4, y: 1 },
+        ],
+        { health: 16 }
+      );
+      const hazards = [{ x: 4, y: 3 }];
+      const gameState = createGameState(
+        createBoard(5, [{ x: 0, y: 2 }], [me], hazards),
+        me
+      );
+      const move = determineMove(gameState);
+      expect(move).toEqual({ x: 3, y: 2 });
     });
   });
 });
