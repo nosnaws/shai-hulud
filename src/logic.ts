@@ -9,7 +9,7 @@ export function info(): InfoResponse {
   const response: InfoResponse = {
     apiversion: "1",
     author: "nosnaws",
-    color: "#b56719",
+    color: "#e3a86d",
     head: "sand-worm",
     tail: "bolt",
   };
