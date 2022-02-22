@@ -105,19 +105,25 @@ const nodeHeuristic = (
     }
   }
 
-  if (node.hasHazard) {
-    total -= 16 / you.health;
-  }
-
-  // TODO: eval possible snake tail, maybe
-
   // Factor in distance to food
-  const orderedFood = food.map((f) => BFS(grid, node.coord, f));
+  const orderedFood = food
+    .map((f) => BFS(grid, node.coord, f))
+    .sort((a, b) => a.length - b.length);
   const a = turn < 50 ? 100 : 50; // much hungrier in the beginning
   const b = turn < 50 ? 1 : 5;
   orderedFood.forEach((foodPath) => {
     total += a * Math.atan((you.health - foodPath.length) / b);
   });
+
+  if (node.hasHazard) {
+    orderedFood.forEach((foodPath) => {
+      const aH = 50;
+      const bH = 5;
+
+      // TODO: handle hazards when there isn't food
+      total += aH * Math.atan((you.health - foodPath.length * 16) / bH);
+    });
+  }
 
   const voronoiScores = voronoriCounts(grid, [
     node.coord,
