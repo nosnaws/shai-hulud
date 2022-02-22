@@ -8,8 +8,8 @@ const logger = getLogger();
 export function info(): InfoResponse {
   const response: InfoResponse = {
     apiversion: "1",
-    author: "",
-    color: "#204f22",
+    author: "nosnaws",
+    color: "#b56719",
     head: "sand-worm",
     tail: "bolt",
   };
