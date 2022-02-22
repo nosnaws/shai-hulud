@@ -95,7 +95,7 @@ const nodeHeuristic = (
   }
 
   if (isPossibleDeathMove) {
-    total += -1000;
+    total += -10000;
   }
 
   if (node.hasSnakeTail && canSnakeEat(grid, snakes, node.coord, isWrapped)) {
@@ -110,8 +110,8 @@ const nodeHeuristic = (
 
   // Factor in distance to food
   const orderedFood = food.map((f) => BFS(grid, node.coord, f));
-  const a = 50;
-  const b = turn < 50 ? 1 : 5; // try to play hungry for the first 50 turns
+  const a = turn < 50 ? 100 : 50; // much hungrier in the beginning
+  const b = turn < 50 ? 1 : 5;
   orderedFood.forEach((foodPath) => {
     total += a * Math.atan((you.health - foodPath.length) / b);
   });

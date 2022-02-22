@@ -349,5 +349,63 @@ describe("alphabeta", () => {
       const move = determineMove(gameState);
       expect(move).toEqual({ x: 4, y: 0 });
     });
+
+    it("eats own tail after growing, should fail when look ahead is added", () => {
+      // f _ _ _ _ _ _ f _ _ _
+      // _ _ f _ f _ f _ _ f f
+      // f f _ f _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // f _ _ _ _ _ _ _ _ _ _
+      // f _ _ _ _ _ _ _ f f f
+      // _ _ _ _ k _ _ _ _ _ _
+      // _ f _ _ e _ s h _ f _
+      // _ _ _ _ e _ s s _ f _
+      // _ _ _ _ e e s s _ _ _
+      // h = my head, k = enemy head
+      // node my snake consumed food turn before, tail spot is no longer valid
+
+      const food = [
+        { x: 9, y: 9 },
+        { x: 9, y: 4 },
+        { x: 9, y: 2 },
+        { x: 9, y: 1 },
+        { x: 8, y: 4 },
+        { x: 7, y: 10 },
+        { x: 6, y: 9 },
+        { x: 4, y: 9 },
+        { x: 3, y: 8 },
+        { x: 2, y: 9 },
+        { x: 10, y: 9 },
+        { x: 10, y: 4 },
+        { x: 1, y: 8 },
+        { x: 1, y: 2 },
+        { x: 0, y: 8 },
+        { x: 0, y: 5 },
+        { x: 0, y: 4 },
+        { x: 0, y: 10 },
+      ];
+      const me = createSnake(
+        [
+          { x: 7, y: 2 },
+          { x: 7, y: 1 },
+          { x: 7, y: 0 },
+          { x: 6, y: 0 },
+          { x: 6, y: 1 },
+          { x: 6, y: 2 },
+        ],
+        { health: 99 }
+      );
+      const other = createSnake([
+        { x: 4, y: 3 },
+        { x: 4, y: 2 },
+        { x: 4, y: 1 },
+        { x: 4, y: 0 },
+        { x: 5, y: 0 },
+      ]);
+      const gameState = createGameState(createBoard(11, food, [me, other]), me);
+      const move = determineMove(gameState);
+      expect(move).toEqual({ x: 6, y: 2 });
+    });
   });
 });
