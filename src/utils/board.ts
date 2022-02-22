@@ -7,6 +7,7 @@ export interface Node {
   hasFood: boolean;
   hasSnake: boolean;
   hasHazard: boolean;
+  hasSnakeTail: boolean;
 }
 
 export type Grid = Node[][];
@@ -18,7 +19,9 @@ export const createGrid = ({
   height,
   width,
 }: Board): Grid => {
+  const snakeTails = snakes.map(prop("body")).flatMap((b) => b.slice(-1));
   const isFood = isInArray(food);
+  const isSnakeTail = isInArray(snakeTails);
   const isSnake = isInArray(snakes.flatMap(prop("body")));
   const isHazard = isInArray(hazards);
 
@@ -32,6 +35,7 @@ export const createGrid = ({
         hasFood: isFood(coord),
         hasSnake: isSnake(coord),
         hasHazard: isHazard(coord),
+        hasSnakeTail: isSnakeTail(coord),
       };
     }
   }
@@ -57,12 +61,6 @@ export const BFS = (
       return getPath(current, visited);
     }
 
-    //for (const edgeNode of getEdges(current.coord)) {
-    //if (Object.values(visited).indexOf(edgeNode) === -1) {
-    //visited[nodeId(edgeNode)] = current;
-    //queue.enqueue(edgeNode);
-    //}
-    //}
     const edgeNodes = getEdges(current.coord);
     const len = edgeNodes.length;
     for (let i = 0; i < len; i++) {
@@ -95,10 +93,20 @@ export const getAllPossibleMoves = (
   isWrapped: boolean
 ): Node[] => roots.flatMap(getNeighbors(grid, isWrapped));
 
+export const getMoves = (
+  grid: Grid,
+  body: Coord[],
+  isWrapped: boolean
+): Node[] => {
+  const [head, neck] = body;
+  const neighbors = getNeighbors(grid, isWrapped)(head);
+  return neighbors.filter((n) => !isCoordEqual(neck)(n.coord)); // filter out neck, so going backwards isn't an option
+};
+
 export const getNeighbors = (grid: Grid, isWrapped: boolean = false) => ({
   x,
   y,
-}: Coord) => {
+}: Coord): Node[] => {
   let neighbors = [
     { x, y: y + 1 }, // up
     { x: x + 1, y }, // right
@@ -116,26 +124,11 @@ export const getNeighbors = (grid: Grid, isWrapped: boolean = false) => ({
   return neighbors
     .filter(isCoordInBounds(grid))
     .map(({ x, y }) => grid[y][x])
-    .filter((n) => !n.hasSnake);
+    .filter((n) => !n.hasSnake || n.hasSnakeTail);
 };
 
-export const getNeighborsWrapped = (grid: Grid) => ({ x, y }: Coord) => {
-  const neighbors = [
-    { x, y: y + 1 }, // up
-    { x: x + 1, y }, // right
-    { x, y: y - 1 }, // down
-    { x: x - 1, y }, // left
-  ]
-    .map(({ x, y }) => ({ x: x % grid[0].length, y: y % grid.length }))
-    .filter(isCoordInBounds(grid))
-    .map(({ x, y }) => grid[y][x])
-    .filter((n) => !n.hasSnake);
-
-  return neighbors;
-};
-
-const isInArray = (food: Coord[]) => (l: Coord): boolean =>
-  food.some(isCoordEqual(l));
+export const isInArray = (coords: Coord[]) => (l: Coord): boolean =>
+  coords.some(isCoordEqual(l));
 
 export const isCoordEqual = (a: Coord) => (b: Coord) =>
   a.x === b.x && a.y === b.y;

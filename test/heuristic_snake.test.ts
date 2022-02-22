@@ -8,25 +8,57 @@ describe("alphabeta", () => {
       const snake1 = createSnake([{ x: 0, y: 0 }]);
       const grid = createGrid(createBoard(3, [], [snake1]));
       const [vCounts] = voronoriCounts(grid, [{ x: 0, y: 0 }]);
-      expect(vCounts.score).toBe(8);
+      expect(vCounts.score).toBe(9);
     });
 
     it("returns counts for 2 snakes", () => {
+      // _ _ _ _ _
+      // _ _ _ h s
+      // _ _ _ _ s
+      // _ _ _ _ _
+      // k e e _ _
       const snake1 = createSnake([
         { x: 3, y: 3 },
-        { x: 3, y: 4 },
+        { x: 4, y: 3 },
+        { x: 4, y: 2 },
       ]);
       const snake2 = createSnake([
         { x: 0, y: 0 },
-        { x: 0, y: 1 },
+        { x: 1, y: 0 },
+        { x: 2, y: 0 },
       ]);
       const grid = createGrid(createBoard(5, [], [snake1, snake2]));
       const [s1VCount, s2VCount] = voronoriCounts(grid, [
         snake1.head,
         snake2.head,
       ]);
+      console.log(s1VCount, s2VCount);
       expect(s1VCount.score).toBe(13);
       expect(s2VCount.score).toBe(3);
+    });
+
+    it("returns counts that include snake going backwards, DELETE ME WHEN FIXED AND THIS TEST FAILS", () => {
+      // _ _ _ _ _
+      // _ _ _ h s
+      // _ _ _ _ _
+      // _ _ _ _ _
+      // k e _ _ _
+      const snake1 = createSnake([
+        { x: 3, y: 3 },
+        { x: 4, y: 3 },
+      ]);
+      const snake2 = createSnake([
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+      ]);
+      const grid = createGrid(createBoard(5, [], [snake1, snake2]));
+      const [s1VCount, s2VCount] = voronoriCounts(grid, [
+        snake1.head,
+        snake2.head,
+      ]);
+      console.log(s1VCount, s2VCount);
+      expect(s1VCount.score).toBe(12); // Should actually be 14
+      expect(s2VCount.score).toBe(5); // Should actually be 4
     });
   });
 
@@ -118,8 +150,9 @@ describe("alphabeta", () => {
         { x: 3, y: 2 }, // _ _ _ _ _
         { x: 2, y: 2 }, // _ s s s _
         { x: 1, y: 2 }, // _ s _ s _
-        { x: 1, y: 1 }, // _ s _ h _
+        { x: 1, y: 1 }, // _ s s h _
         { x: 1, y: 0 },
+        { x: 2, y: 0 },
       ]);
       const gameState = createGameState(
         createBoard(5, [{ x: 0, y: 4 }], [snake]),
@@ -220,7 +253,6 @@ describe("alphabeta", () => {
       );
 
       const move = determineMove(gameState);
-      console.log(move);
       expect(move).not.toEqual({ x: 2, y: 5 });
     });
 
@@ -259,10 +291,63 @@ describe("alphabeta", () => {
         createBoard(11, [{ x: 5, y: 5 }], [me, other]),
         me
       );
-      console.log(JSON.stringify(gameState, null, 2));
       const move = determineMove(gameState);
-      console.log(move);
       expect(move).not.toEqual({ x: 8, y: 1 });
+    });
+
+    it("choose path through moving tail", () => {
+      // _ _ _ _ _
+      // _ _ _ _ _
+      // _ e e e e
+      // _ e s s h
+      // _ k _ _ _
+      // h = my head, k = enemy head
+
+      const me = createSnake([
+        { x: 4, y: 1 },
+        { x: 3, y: 1 },
+        { x: 2, y: 1 },
+      ]);
+      const other = createSnake([
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 1, y: 2 },
+        { x: 2, y: 2 },
+        { x: 3, y: 2 },
+        { x: 4, y: 2 },
+      ]);
+      const gameState = createGameState(createBoard(5, [], [me, other]), me);
+      const move = determineMove(gameState);
+      expect(move).toEqual({ x: 4, y: 2 });
+    });
+
+    it("does not choose path through moving tail if snake can eat", () => {
+      // _ _ _ _ _
+      // _ _ _ _ _
+      // _ e e e e
+      // _ e s s h
+      // f k _ _ _
+      // h = my head, k = enemy head
+
+      const me = createSnake([
+        { x: 4, y: 1 },
+        { x: 3, y: 1 },
+        { x: 2, y: 1 },
+      ]);
+      const other = createSnake([
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 1, y: 2 },
+        { x: 2, y: 2 },
+        { x: 3, y: 2 },
+        { x: 4, y: 2 },
+      ]);
+      const gameState = createGameState(
+        createBoard(5, [{ x: 0, y: 0 }], [me, other]),
+        me
+      );
+      const move = determineMove(gameState);
+      expect(move).toEqual({ x: 4, y: 0 });
     });
   });
 });

@@ -1,4 +1,4 @@
-import { createGrid, BFS, getNeighbors } from "../../src/utils/board";
+import { createGrid, BFS, getNeighbors, getMoves } from "../../src/utils/board";
 import { createBoard, createSnake } from "../utils";
 
 describe("utils/board", () => {
@@ -17,27 +17,6 @@ describe("utils/board", () => {
       const grid = createGrid(createBoard(4, [{ x: 0, y: 0 }]));
       const foodTile = grid[0][0];
       expect(foodTile.hasFood).toBe(true);
-    });
-  });
-
-  describe("getNeighbors", () => {
-    it("gets left right neighbors", () => {
-      const snake = createSnake([
-        { x: 5, y: 1 },
-        { x: 5, y: 0 },
-        { x: 4, y: 0 },
-        { x: 3, y: 0 },
-        { x: 3, y: 1 },
-        { x: 3, y: 2 },
-        { x: 4, y: 2 },
-        { x: 5, y: 2 },
-      ]);
-
-      const grid = createGrid(createBoard(11, [], [snake]));
-      const neighbors = getNeighbors(grid)({ x: 5, y: 1 });
-      expect(neighbors).toHaveLength(2);
-      expect(neighbors[0].coord).toEqual({ x: 6, y: 1 });
-      expect(neighbors[1].coord).toEqual({ x: 4, y: 1 });
     });
   });
 
@@ -64,10 +43,27 @@ describe("utils/board", () => {
       const path = BFS(grid, head, goal);
 
       path.forEach((node) => {
-        snake.forEach((sp) => {
-          expect(node.coord).not.toEqual(sp);
-        });
+        expect(node.coord).not.toEqual({ x: 3, y: 3 });
       });
+    });
+  });
+
+  describe("getMove", () => {
+    it("won't move backward", () => {
+      // _ _ _
+      // _ _ h
+      // _ _ s
+
+      const snake = createSnake([
+        { x: 2, y: 1 },
+        { x: 2, y: 0 },
+      ]);
+
+      const grid = createGrid(createBoard(3, [], [snake]));
+      const neighbors = getMoves(grid, snake.body, false);
+      expect(neighbors).toHaveLength(2);
+      expect(neighbors[0].coord).toEqual({ x: 2, y: 2 });
+      expect(neighbors[1].coord).toEqual({ x: 1, y: 1 });
     });
   });
 
@@ -85,11 +81,79 @@ describe("utils/board", () => {
       expect(neigbors).toHaveLength(0);
     });
     it("does not return options with snakes", () => {
-      const snake = createSnake([{ x: 0, y: 1 }]);
+      const snake = createSnake([
+        { x: 0, y: 1 },
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+      ]);
       const grid = createGrid(createBoard(3, [], [snake]));
       const neigbors = getNeighbors(grid)({ x: 0, y: 0 });
       expect(neigbors).toHaveLength(1);
       expect(neigbors[0].coord).toEqual({ x: 1, y: 0 });
+    });
+
+    it("ignores tail space", () => {
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ s s s _ _ _ _ _
+      // _ _ _ s _ h _ _ _ _ _
+      // _ _ _ s s s _ _ _ _ _
+
+      const snake = createSnake([
+        { x: 5, y: 1 },
+        { x: 5, y: 0 },
+        { x: 4, y: 0 },
+        { x: 3, y: 0 },
+        { x: 3, y: 1 },
+        { x: 3, y: 2 },
+        { x: 4, y: 2 },
+        { x: 5, y: 2 },
+      ]);
+
+      const grid = createGrid(createBoard(11, [], [snake]));
+      const neighbors = getNeighbors(grid)({ x: 5, y: 1 });
+      expect(neighbors).toHaveLength(3);
+      expect(neighbors[0].coord).toEqual({ x: 5, y: 2 });
+      expect(neighbors[1].coord).toEqual({ x: 6, y: 1 });
+      expect(neighbors[2].coord).toEqual({ x: 4, y: 1 });
+    });
+
+    it("does not return occupied space", () => {
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ s s s s _ _ _ _
+      // _ _ _ s _ h _ _ _ _ _
+      // _ _ _ s s s _ _ _ _ _
+
+      const snake = createSnake([
+        { x: 5, y: 1 },
+        { x: 5, y: 0 },
+        { x: 4, y: 0 },
+        { x: 3, y: 0 },
+        { x: 3, y: 1 },
+        { x: 3, y: 2 },
+        { x: 4, y: 2 },
+        { x: 5, y: 2 },
+        { x: 6, y: 2 },
+      ]);
+
+      const grid = createGrid(createBoard(11, [], [snake]));
+      const neighbors = getNeighbors(grid)({ x: 5, y: 1 });
+      expect(neighbors).toHaveLength(2);
+      expect(neighbors[0].coord).toEqual({ x: 6, y: 1 });
+      expect(neighbors[1].coord).toEqual({ x: 4, y: 1 });
     });
   });
 });

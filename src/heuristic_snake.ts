@@ -1,15 +1,19 @@
-import { Coord, GameState } from "./types";
+import { Battlesnake, Coord, GameState } from "./types";
 import { prop } from "./utils/general";
 import {
   BFS,
-  getAllPossibleMoves,
   Grid,
   Node,
   isCoordEqual,
   createGrid,
-  getNeighbors,
+  getMoves,
 } from "./utils/board";
 
+/**
+ * Counts a node as 'owned' if a root can reach it before any other roots.
+ * returns each root with the total number of owned nodes for that root.
+ * Does not factor in moving backward (illegal in battlesnake), which may cause some issues with snakes of length 2.
+ **/
 export const voronoriCounts = (
   grid: Grid,
   roots: Coord[]
@@ -21,7 +25,7 @@ export const voronoriCounts = (
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const node = grid[y][x];
-      if (node.hasSnake) {
+      if (node.hasSnake && !node.hasSnakeTail) {
         continue;
       }
 
@@ -61,15 +65,28 @@ const nodeHeuristic = (
   const food = board.food;
   const isCurrent = isCoordEqual(node.coord);
   const enemySnakes = snakes.filter((s) => s.id !== you.id);
-  const smallerSnakes = enemySnakes.filter((s) => s.length < you.length);
-  const largerSnakes = enemySnakes.filter((s) => s.length >= you.length);
+  const snakesWithMoves: {
+    snake: Battlesnake;
+    possibleMoves: Node[];
+  }[] = enemySnakes.map((s) => ({
+    snake: s,
+    possibleMoves: getMoves(grid, s.body, isWrapped),
+  }));
+  const smallerSnakes = snakesWithMoves.filter(
+    ({ snake }) => snake.length < you.length
+  );
+  const largerSnakes = snakesWithMoves.filter(
+    ({ snake }) => snake.length >= you.length
+  );
   const isPossibleKillMove =
-    getAllPossibleMoves(grid, smallerSnakes.map(prop("head")), isWrapped)
+    smallerSnakes
+      .flatMap(prop("possibleMoves"))
       .map(prop("coord"))
       .filter(isCurrent).length > 0;
 
   const isPossibleDeathMove =
-    getAllPossibleMoves(grid, largerSnakes.map(prop("head")), isWrapped)
+    largerSnakes
+      .flatMap(prop("possibleMoves"))
       .map(prop("coord"))
       .filter(isCurrent).length > 0;
 
@@ -81,9 +98,14 @@ const nodeHeuristic = (
     total += -1000;
   }
 
+  if (node.hasSnakeTail && canSnakeEat(grid, snakes, node.coord, isWrapped)) {
+    total += -1000;
+  }
+
   if (node.hasHazard) {
     total -= 16 / you.health;
   }
+
   // TODO: eval possible snake tail, maybe
 
   // Factor in distance to food
@@ -107,12 +129,27 @@ const nodeHeuristic = (
   return total;
 };
 
+const canSnakeEat = (
+  grid: Grid,
+  snakes: Battlesnake[],
+  tail: Coord,
+  isWrapped: boolean
+): boolean => {
+  const snake = snakes.find((s) => isCoordEqual(s.body[s.length - 1])(tail));
+
+  if (snake) {
+    const possibleSnakeMoves = getMoves(grid, snake.body, isWrapped);
+    return possibleSnakeMoves.some((m) => m.hasFood);
+  }
+  return false;
+};
+
 export const determineMove = (state: GameState): Coord => {
   const board = state.board;
   const you = state.you;
   const isWrapped = state.game.ruleset.name === "wrapped";
   const grid = createGrid(board);
-  const possibleMoves = getNeighbors(grid, isWrapped)(you.head);
+  const possibleMoves = getMoves(grid, you.body, isWrapped);
 
   const [bestMove, ...rest] = possibleMoves
     .map((move) => ({ move, score: nodeHeuristic(grid, state, move) }))
