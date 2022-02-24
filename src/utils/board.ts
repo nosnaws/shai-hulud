@@ -115,10 +115,7 @@ export const getNeighbors = (grid: Grid, isWrapped: boolean = false) => ({
   ];
 
   if (isWrapped) {
-    neighbors = neighbors.map(({ x, y }) => ({
-      x: x % grid[0].length,
-      y: y % grid.length,
-    }));
+    neighbors = adjustForWrapped(neighbors, grid.length, grid[0].length);
   }
 
   return neighbors
@@ -127,13 +124,23 @@ export const getNeighbors = (grid: Grid, isWrapped: boolean = false) => ({
     .filter((n) => !n.hasSnake || n.hasSnakeTail);
 };
 
+export const adjustForWrapped = (
+  coords: Coord[],
+  height: number,
+  width: number
+): Coord[] =>
+  coords.map(({ x, y }) => ({
+    x: x % width,
+    y: y % height,
+  }));
+
 export const isInArray = (coords: Coord[]) => (l: Coord): boolean =>
   coords.some(isCoordEqual(l));
 
 export const isCoordEqual = (a: Coord) => (b: Coord) =>
   a.x === b.x && a.y === b.y;
 
-const isCoordInBounds = (grid: Grid) => (b: Coord) =>
+export const isCoordInBounds = (grid: Grid) => (b: Coord) =>
   b.y >= 0 && b.y < grid.length && b.x >= 0 && b.x < grid[0].length;
 
 const nodeId = (node: Node): string => `${node.coord.x}${node.coord.y}`;

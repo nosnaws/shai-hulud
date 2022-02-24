@@ -2,7 +2,7 @@ import { InfoResponse, GameState, MoveResponse, Coord, Board } from "./types";
 import getLogger from "./logger";
 import { isCoordEqual } from "./utils/board";
 
-import { determineMove } from "./heuristic_snake";
+import { determineMove } from "./lookahead_snake";
 
 const logger = getLogger();
 export function info(): InfoResponse {

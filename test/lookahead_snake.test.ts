@@ -1,4 +1,4 @@
-import { determineMove, voronoriCounts } from "../src/heuristic_snake";
+import { determineMove, voronoriCounts } from "../src/lookahead_snake";
 import { createBoard, createGameState, createSnake } from "./utils";
 import { createGrid } from "../src/utils/board";
 

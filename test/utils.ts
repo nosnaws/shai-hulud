@@ -1,16 +1,19 @@
 import { v4 as uuid } from "uuid";
-import { Coord, Battlesnake, Board, GameState, Game } from "../src/types";
+import { Coord, Battlesnake, Board, Game } from "../src/types";
+import { GameStateSim } from "../src/utils/game_sim";
 
 export const createGameState = (
   board: Board,
   you: Battlesnake,
-  turn = 1
-): GameState => {
+  turn = 1,
+  mode = "standard"
+): GameStateSim => {
   return {
     board,
     you,
-    game: createGame(),
+    game: createGame(mode),
     turn,
+    pendingMoves: [],
   };
 };
 
@@ -47,10 +50,10 @@ export const createSnake = (
   };
 };
 
-const createGame = (): Game => {
+const createGame = (mode = "standard"): Game => {
   return {
     id: uuid(),
-    ruleset: { name: "standard", version: "0.1" },
+    ruleset: { name: mode, version: "0.1" },
     timeout: 500,
   };
 };
