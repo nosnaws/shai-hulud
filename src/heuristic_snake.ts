@@ -7,7 +7,9 @@ import {
   isCoordEqual,
   createGrid,
   getMoves,
+  hasDuplicates,
 } from "./utils/board";
+import { log } from "./utils/general";
 
 /**
  * Counts a node as 'owned' if a root can reach it before any other roots.
@@ -98,13 +100,6 @@ const nodeHeuristic = (
     total += -10000;
   }
 
-  if (node.hasSnakeTail) {
-    const s = findSnake(snakes, node.coord);
-    if (s && didSnakeEat(s.body)) {
-      total += -10000;
-    }
-  }
-
   // Factor in distance to food
   const orderedFood = food
     .map((f) => BFS(grid, node.coord, f))
@@ -138,15 +133,6 @@ const nodeHeuristic = (
   return total;
 };
 
-const didSnakeEat = (body: Coord[]): boolean => {
-  const last = body[body.length - 1];
-  const secondToLast = body[body.length - 2];
-  return last && secondToLast && isCoordEqual(last)(secondToLast);
-};
-
-const findSnake = (snakes: Battlesnake[], tail: Coord) =>
-  snakes.find((s) => isCoordEqual(s.body[s.length - 1])(tail));
-
 export const determineMove = (state: GameState): Coord => {
   const board = state.board;
   const you = state.you;
@@ -157,5 +143,7 @@ export const determineMove = (state: GameState): Coord => {
   const [bestMove, ...rest] = possibleMoves
     .map((move) => ({ move, score: nodeHeuristic(grid, state, move) }))
     .sort((a, b) => b.score - a.score);
+
+  log(JSON.stringify([bestMove, ...rest], null, 2));
   return bestMove?.move.coord;
 };

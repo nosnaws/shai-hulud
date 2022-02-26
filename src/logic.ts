@@ -3,6 +3,7 @@ import getLogger from "./logger";
 import { isCoordEqual } from "./utils/board";
 
 import { determineMove } from "./lookahead_snake";
+import { log } from "./utils/general";
 
 const logger = getLogger();
 export function info(): InfoResponse {
@@ -26,7 +27,8 @@ export function end(gameState: GameState): void {
 
 export function move(state: GameState): MoveResponse {
   logger.info(`${state.game.id} MOVE`);
-  const moveCoord = determineMove(state);
+
+  const moveCoord = determineMove(state, 4);
   const moveRes = getMoveResponse(moveCoord, state);
   logger.info(`${state.game.id} MOVE ${state.turn}: ${moveRes.move}`);
   return moveRes;

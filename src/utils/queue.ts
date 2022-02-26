@@ -1,8 +1,9 @@
-interface Queue<T> {
+export interface Queue<T> {
   contents: () => T[];
   size: () => number;
   enqueue: (item: T) => number;
   dequeue: () => T;
+  front: () => T;
 }
 
 export const createQueue = <T>(initial: T[] = []): Queue<T> => {
@@ -19,6 +20,7 @@ export const createQueue = <T>(initial: T[] = []): Queue<T> => {
   return {
     enqueue,
     dequeue,
+    front: () => queue[0],
     contents: () => [...queue],
     size: () => queue.length,
   };
