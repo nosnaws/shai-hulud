@@ -1,5 +1,6 @@
 import { v4 as uuid } from "uuid";
 import { Coord, Battlesnake, Board, Game } from "../src/types";
+import { createGrid } from "../src/utils/board";
 import { GameStateSim } from "../src/utils/game_sim";
 
 export const createGameState = (
@@ -8,12 +9,15 @@ export const createGameState = (
   turn = 1,
   mode = "standard"
 ): GameStateSim => {
+  const grid = createGrid(board);
   return {
     board,
     you,
     game: createGame(mode),
     turn,
     pendingMoves: [],
+    grid,
+    isWrapped: mode === "wrapped",
   };
 };
 

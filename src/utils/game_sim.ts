@@ -1,23 +1,27 @@
 import { v4 as uuid } from "uuid";
 import { Battlesnake, Board, Coord, GameState, Game, Ruleset } from "../types";
-import { isCoordEqual } from "./board";
+
+import { isCoordEqual, Grid, createGrid, printGrid } from "./board";
 import { placeFoodAutomatically } from "./food_spawning";
-import { prop } from "./general";
+import { log, prop } from "./general";
 
 export interface GameStateSim extends GameState {
   pendingMoves: { snake: Battlesnake; move: Coord }[] | undefined;
+  grid: Grid;
+  isWrapped: boolean;
 }
 
 export const resolveTurn = (gs: GameStateSim): GameStateSim => {
-  const time = Date.now();
   const ns = cloneGameState(gs);
   // apply moves
   //
-  if (Array.isArray(ns.pendingMoves)) {
-    for (const pm of ns.pendingMoves) {
-      makeMove(ns, pm.snake, pm.move);
-    }
+  for (const pm of ns.pendingMoves ?? []) {
+    //log(`snake:${pm.snake.id} move:${pm.move.x},${pm.move.y}`);
+    makeMove(ns, pm.snake, pm.move);
   }
+  //printGrid(ns.grid);
+  //log(`head:${ns.you.head.x},${ns.you.head.y}`);
+  //log(`reducing health and removing tail`);
   // remove tails and reduce health
   ns.board.snakes = ns.board.snakes.map((s) => {
     const isHazard = ns.board.hazards.some(isCoordEqual(s.head));
@@ -30,7 +34,7 @@ export const resolveTurn = (gs: GameStateSim): GameStateSim => {
   });
 
   // handle food spawning
-  //placeFoodAutomatically(ns);
+  placeFoodAutomatically(ns);
 
   // detect eliminations
   let snakesLeft = ns.board.snakes.filter((s) => s.health > 0);
@@ -89,7 +93,11 @@ export const resolveTurn = (gs: GameStateSim): GameStateSim => {
     ns.you = updatedYou;
   }
 
-  console.log(`resolveTurn time ${Date.now() - time}`);
+  if (process.env.LOG_GRID === "true") {
+    const updateForPrint = cloneGameState(ns);
+    printGrid(updateForPrint.grid);
+  }
+
   return ns;
 };
 
@@ -145,13 +153,16 @@ export const isGameOver = (gs: GameStateSim): boolean =>
   gs.board.snakes.length < 1;
 
 export const cloneGameState = (gs: GameStateSim): GameStateSim => {
-  const { you, game, turn, board } = gs;
+  const { you, game, turn, board, isWrapped } = gs;
+  const cb = cloneBoard(board);
   const clonedState: GameStateSim = {
     you: cloneSnake(you),
+    grid: createGrid(cb),
     turn,
-    board: cloneBoard(board),
+    board: cb,
     game: cloneGame(game),
     pendingMoves: gs.pendingMoves ? clonePendingMoves(gs.pendingMoves) : [],
+    isWrapped,
   };
 
   return clonedState;

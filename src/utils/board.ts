@@ -1,4 +1,4 @@
-import { Board, Coord, Ruleset } from "../types";
+import { Battlesnake, Board, Coord, Ruleset } from "../types";
 import { prop } from "./general";
 import { createQueue } from "./queue";
 
@@ -8,6 +8,7 @@ export interface Node {
   hasSnake: boolean;
   hasHazard: boolean;
   hasSnakeTail: boolean;
+  snake: Battlesnake | undefined;
 }
 
 export type Grid = Node[][];
@@ -23,6 +24,8 @@ export const createGrid = ({
   const isFood = isInArray(food);
   const isSnakeTail = isInArray(snakeTails);
   const isSnake = isInArray(snakes.flatMap(prop("body")));
+  const getSnake = (bodyPart: Coord) =>
+    snakes.find((s) => s.body.some(isCoordEqual(bodyPart)));
   const isHazard = isInArray(hazards);
 
   const grid: Grid = [];
@@ -36,6 +39,7 @@ export const createGrid = ({
         hasSnake: isSnake(coord),
         hasHazard: isHazard(coord),
         hasSnakeTail: isSnakeTail(coord),
+        snake: getSnake(coord),
       };
     }
   }
@@ -98,9 +102,10 @@ export const getMoves = (
   body: Coord[],
   isWrapped: boolean
 ): Node[] => {
-  const [head, neck] = body;
-  const neighbors = getNeighbors(grid, isWrapped)(head);
-  return neighbors.filter((n) => !isCoordEqual(neck)(n.coord)); // filter out neck, so going backwards isn't an option
+  //const [head, neck] = body;
+  //const neighbors = getNeighbors(grid, isWrapped)(head);
+  //return neighbors.filter((n) => !isCoordEqual(neck)(n.coord)); // filter out neck, so going backwards isn't an option
+  return getNeighbors(grid, isWrapped)(body[0]);
 };
 
 export const getNeighbors = (grid: Grid, isWrapped: boolean = false) => ({
@@ -121,7 +126,11 @@ export const getNeighbors = (grid: Grid, isWrapped: boolean = false) => ({
   return neighbors
     .filter(isCoordInBounds(grid))
     .map(({ x, y }) => grid[y][x])
-    .filter((n) => !n.hasSnake || n.hasSnakeTail);
+    .filter(
+      (n) =>
+        !n.hasSnake ||
+        (n.hasSnakeTail && n.snake && !hasDuplicates(n.snake.body))
+    );
 };
 
 export const adjustForWrapped = (
@@ -145,38 +154,52 @@ export const isCoordInBounds = (grid: Grid) => (b: Coord) =>
 
 const nodeId = (node: Node): string => `${node.coord.x}${node.coord.y}`;
 
-const printGrid = (
-  grid: Grid,
-  root: Coord,
-  current: Coord,
-  goal: Coord,
-  visited: Node[]
-) => {
-  const nodeChar = " . ";
-  const visitedChar = " v ";
-  const rootChar = " r ";
-  const goalChar = " g ";
-  const currentChar = " c ";
+export const hasDuplicates = (coords: Coord[]): boolean => {
+  if (coords.length < 2) {
+    return false;
+  }
+
+  let current = coords[0];
+  const len = coords.length;
+  for (let i = 1; i < len; i++) {
+    const next = coords[i];
+    if (isCoordEqual(current)(next)) {
+      return true;
+    }
+    current = next;
+  }
+
+  return false;
+};
+
+export const printGrid = (grid: Grid) => {
+  const nodeChar = " _ ";
+  const snakeChar = " s ";
+  const headChar = " h ";
+  const foodChar = " f ";
+  const hazardChar = " x ";
 
   const getCharForNode = (node: Node) => {
     const isEqual = isCoordEqual(node.coord);
-    if (isEqual(current)) {
-      return currentChar;
+    if (node.snake && isEqual(node.snake.head)) {
+      return ` ${node.snake.name[0]} `;
     }
-    if (isEqual(root)) {
-      return rootChar;
+    if (node.hasSnake) {
+      return snakeChar;
     }
-    if (isEqual(goal)) {
-      return goalChar;
+    if (node.hasFood) {
+      return foodChar;
     }
-    if (visited.indexOf(node) !== -1) {
-      return visitedChar;
+    if (node.hasHazard) {
+      return hazardChar;
     }
 
     return nodeChar;
   };
 
-  const rowStrings = grid.map((row) => row.map(getCharForNode).join("|"));
+  const rowStrings = grid
+    .map((row) => row.map(getCharForNode).join("|"))
+    .reverse();
 
   console.dir(rowStrings);
 };

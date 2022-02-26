@@ -7,6 +7,9 @@ import {
   isCoordEqual,
   createGrid,
   getMoves,
+  getNeighbors,
+  printGrid,
+  hasDuplicates,
 } from "./utils/board";
 import {
   cloneGameState,
@@ -17,7 +20,99 @@ import {
   resolveTurn,
   addMove,
 } from "./utils/game_sim";
-import { createQueue } from "./utils/queue";
+
+import { log } from "./utils/general";
+import { createQueue, Queue } from "./utils/queue";
+
+export const voronoi = (gs: GameStateSim): number => {
+  interface Pair {
+    snakeHead: Coord;
+    coord: Coord;
+  }
+
+  const getId = (coord: Coord) => `${coord.x}${coord.y}`;
+  let depth = 0;
+  const counts: { [key: string]: number } = {};
+  const DEPTH_MARK: Pair = {
+    snakeHead: { x: -1, y: -1 },
+    coord: { x: -1, y: -1 },
+  };
+  const MARK = -1;
+  const q: Queue<Pair> = createQueue();
+  const visited = new Map();
+  const snakes = new Map();
+
+  // get all snake heads
+  // add them to a counts object
+  // add them to visited set
+  for (const snake of gs.board.snakes) {
+    const snakeId = getId(snake.head);
+    snakes.set(snakeId, snake);
+    q.enqueue({ snakeHead: snake.head, coord: snake.head });
+    visited.set(snakeId, snake.head);
+  }
+  q.enqueue(DEPTH_MARK);
+
+  // while queue not empty
+  while (q.size() > 0) {
+    const pair = q.dequeue();
+
+    if (pair === DEPTH_MARK) {
+      //console.log("found depth mark");
+      depth++;
+      q.enqueue(DEPTH_MARK);
+      if (q.front() === DEPTH_MARK) {
+        //console.log("done");
+        break; // we've reach the end
+      }
+    } else {
+      const { snakeHead, coord } = pair;
+      const snakeId = getId(snakeHead);
+
+      for (const n of getNeighbors(gs.grid, gs.isWrapped)(coord)) {
+        const currentId = getId(n.coord);
+        if (visited.has(currentId)) {
+          const other = visited.get(currentId);
+          if (other !== MARK && !isCoordEqual(other)(snakeHead)) {
+            const otherId = getId(other);
+            if (!counts[otherId]) {
+              counts[otherId] = 0;
+            }
+            counts[otherId]--;
+            //console.log(
+            //`subtracting count for coord:${currentId} snake:${otherId} total:${counts[otherId]}`
+            //);
+            visited.set(currentId, MARK);
+          }
+        } else {
+          if (!counts[snakeId]) {
+            counts[snakeId] = 0;
+          }
+          counts[snakeId]++;
+          //console.log(
+          //`adding count for coord:${currentId} snake:${snakeId} total:${counts[snakeId]}`
+          //);
+
+          visited.set(currentId, snakeHead);
+          q.enqueue({ snakeHead, coord: n.coord });
+        }
+      }
+    }
+  }
+  log(counts);
+  return counts[getId(gs.you.head)] ?? 0;
+  // if visited
+  // get visited by
+  // if not my snake
+  // reduce count for snake
+  // add visited mark
+  // else
+  // get neighbors
+  // loop through neighbors
+  // add to count
+  // add to visited
+  // add to queue
+};
 
 /**
  * Counts a node as 'owned' if a root can reach it before any other roots.
@@ -61,12 +156,48 @@ export const voronoriCounts = (
   return scores;
 };
 
+export const voronoriCountsCrowFlies = (
+  grid: Grid,
+  roots: Coord[]
+): { root: Coord; score: number }[] => {
+  const height = grid.length;
+  const width = grid[0].length;
+  const scores = roots.map((root) => ({ root, score: 0 }));
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const node = grid[y][x];
+      if (node.hasSnake && !node.hasSnakeTail) {
+        continue;
+      }
+
+      const pathsAsc = roots
+        .map((r) => ({
+          root: r,
+          distance: Math.sqrt(
+            Math.pow(r.x - node.coord.x, 2) + Math.pow(r.y - node.coord.y, 2)
+          ),
+        }))
+        .sort((a, b) => a.distance - b.distance);
+      const [p1, p2] = pathsAsc;
+
+      const isOwner = isCoordEqual(p1.root);
+      const ownerScore = scores.find((s) => isOwner(s.root));
+      if (ownerScore) {
+        ownerScore.score += 1;
+      }
+    }
+  }
+
+  return scores;
+};
+
 const nodeHeuristic = (
   grid: Grid,
   { board, you, game, turn }: GameState,
-  node: Node
+  node: Node,
+  runVoronoi: boolean = true
 ): number => {
-  const time = Date.now();
   const isWrapped = game.ruleset.name === "wrapped";
   let total = 0;
   const snakes = board.snakes;
@@ -98,23 +229,12 @@ const nodeHeuristic = (
       .map(prop("coord"))
       .filter(isCurrent).length > 0;
 
-  if (node.hasFood) {
-    total += 100;
-  }
-
   if (isPossibleKillMove) {
     total += 1000;
   }
 
   if (isPossibleDeathMove) {
     total += -10000;
-  }
-
-  if (node.hasSnakeTail) {
-    const s = findSnake(snakes, node.coord);
-    if (s && didSnakeEat(s.body)) {
-      total += -10000;
-    }
   }
 
   // Factor in distance to food
@@ -126,17 +246,19 @@ const nodeHeuristic = (
   orderedFood.forEach((foodPath) => {
     // TODO: handle hazards when there isn't food, could also factor in the number of hazard spaces on the path
     const foodDistance = foodPath.length;
-    total += Math.atan(you.health - foodDistance);
+    total += a * Math.atan(you.health - foodDistance / b);
   });
 
-  const voronoiScores = voronoriCounts(grid, [
-    node.coord,
-    ...enemySnakes.map(prop("head")),
-  ]);
-  const voronoiScore = voronoiScores.find((s) => isCurrent(s.root));
+  if (runVoronoi) {
+    const voronoiScores = voronoriCountsCrowFlies(grid, [
+      node.coord,
+      ...enemySnakes.map(prop("head")),
+    ]);
+    const voronoiScore = voronoiScores.find((s) => isCurrent(s.root));
 
-  if (voronoiScore) {
-    total += voronoiScore.score * 1; // should be a hyper parameter
+    if (voronoiScore) {
+      total += voronoiScore.score * 1; // should be a hyper parameter
+    }
   }
 
   if (node.hasHazard) {
@@ -146,135 +268,198 @@ const nodeHeuristic = (
   return total;
 };
 
-const didSnakeEat = (body: Coord[]): boolean => {
-  const last = body[body.length - 1];
-  const secondToLast = body[body.length - 2];
-  return last && secondToLast && isCoordEqual(last)(secondToLast);
-};
+const stateHeuristic = (gs: GameStateSim): number => {
+  const { you, board, turn, grid } = gs;
+  const headNode = grid[you.head.y][you.head.x];
+  const otherSnakes = gs.board.snakes.filter((s) => s.id !== gs.you.id);
 
-const findSnake = (snakes: Battlesnake[], tail: Coord) =>
-  snakes.find((s) => isCoordEqual(s.body[s.length - 1])(tail));
+  let total = 0;
+  const isHead = isCoordEqual(you.head);
+  const snakesWithMoves: {
+    snake: Battlesnake;
+    possibleMoves: Node[];
+  }[] = otherSnakes.map((s) => ({
+    snake: s,
+    possibleMoves: getMoves(grid, s.body, gs.isWrapped),
+  }));
 
-const minimax = (
-  gs: GameStateSim,
-  depth: number,
-  maximizingPlayer: boolean,
-  firstMove: Node | undefined = undefined
-): number => {
-  const time = Date.now();
-  let ns = cloneGameState(gs);
-  const grid = createGrid(ns.board);
-  const isWrapped = ns.game.ruleset.name === "wrapped";
+  if (didWeWinBoys(gs, you)) {
+    printGrid(gs.grid);
+    log("we win");
+    return Infinity;
+  }
 
-  if (isGameOver(ns)) {
-    if (didWeWinBoys(ns, ns.you)) {
-      return Infinity;
-    }
-    if (didWeLoseSadBoys(ns, ns.you)) {
-      return -Infinity;
+  if (didWeLoseSadBoys(gs, you)) {
+    printGrid(gs.grid);
+    log("we lose");
+    return -Infinity;
+  }
+
+  total += 10000 / board.snakes.length ?? 1;
+  const foodPaths = board.food.map((f) => BFS(grid, you.head, f));
+  const a = 40; // much hungrier in the beginning
+  const b = 2;
+  foodPaths.forEach((foodPath) => {
+    // TODO: handle hazards when there isn't food, could also factor in the number of hazard spaces on the path
+    const foodDistanceCost = headNode.hasHazard ? 16 : 1;
+    total +=
+      a * Math.atan(you.health - (foodPath.length * foodDistanceCost) / b);
+  });
+  //if (headNode.hasFood) {
+  //total += 100;
+  //}
+
+  const voronoiScore = voronoi(gs);
+
+  log(`voronoi for ${you.head.x},${you.head.y} score:${voronoiScore}`);
+  if (voronoiScore) {
+    total += voronoiScore * 60; // should be a hyper parameter
+  }
+
+  for (const pm of snakesWithMoves) {
+    if (pm.possibleMoves.map(prop("coord")).some(isHead)) {
+      if (pm.snake.length >= you.length) {
+        log(`possible death move:${you.head.x},${you.head.y}`);
+        total = -10000;
+      }
+      if (pm.snake.length < you.length) {
+        total = total * 1000;
+      }
     }
   }
 
-  if (depth < 1) {
-    const h = nodeHeuristic(grid, ns, grid[ns.you.head.y][ns.you.head.x]);
-    return h;
+  if (headNode.hasHazard) {
+    total += -Math.atan(you.health / 16);
+  }
+
+  if (headNode.hasSnakeTail && hasDuplicates(headNode.snake?.body ?? [])) {
+    total = -Infinity;
+  }
+
+  log(`head:${you.head.x},${you.head.y} total:${total}`);
+  return total;
+};
+
+export const alphabeta = (
+  gs: GameStateSim,
+  move: Coord,
+  depth: number,
+  alpha: number,
+  beta: number,
+  maximizingPlayer: boolean
+): { score: number; move: Coord } => {
+  const printState = (s: GameStateSim, value: number) =>
+    log(`depth:${depth} head:${s.you.head.x},${s.you.head.y} value:${value}`);
+
+  const { you, grid, board, isWrapped } = gs;
+
+  //if (isGameOver(gs)) {
+  //log("game over");
+  //if (didWeWinBoys(gs, gs.you)) {
+  //printGrid(gs.grid);
+  //log("we win");
+  //log({ score: Infinity, move: you.head });
+  //return { score: Infinity, move: you.head };
+  //}
+  //if (didWeLoseSadBoys(gs, gs.you)) {
+  //printGrid(gs.grid);
+  //log("we lost");
+  //log({ score: -Infinity, move: you.head });
+  //return { score: -Infinity, move: you.head };
+  //}
+  //log("wat");
+  //}
+
+  if (depth < 1 || isGameOver(gs)) {
+    //const h = nodeHeuristic(ns.grid, ns, ns.grid[ns.you.head.y][ns.you.head.x]);
+    const h = stateHeuristic(gs);
+    //log({ score: h, move });
+    return { score: h, move };
   }
 
   if (maximizingPlayer) {
     let value = -Infinity;
 
-    if (firstMove) {
-      const cloned = cloneGameState(ns);
-      addMove(cloned, cloned.you, firstMove.coord);
-      value = Math.max(value, minimax(cloned, depth - 1, false));
-    } else {
-      const moves = getMoves(grid, ns.you.body, isWrapped);
-      if (moves.length > 0) {
-        for (const move of getMoves(grid, ns.you.body, isWrapped)) {
-          const cloned = cloneGameState(ns);
-          addMove(cloned, cloned.you, move.coord);
-          value = Math.max(value, minimax(cloned, depth - 1, false));
-        }
-      } else {
-        const cloned = cloneGameState(ns);
-        addMove(ns, ns.you, {
-          x: ns.you.head.x - 1,
-          y: ns.you.head.y,
-        }); //no moves, go left
+    for (const pm of getMoves(grid, you.body, isWrapped)) {
+      const ns = cloneGameState(gs);
+      log(`testing move:${pm.coord.x},${pm.coord.y}`);
+      addMove(ns, you, pm.coord);
 
-        value = Math.max(value, minimax(cloned, depth - 1, false));
+      const moveH = stateHeuristic(ns);
+      const min = alphabeta(ns, pm.coord, depth - 1, alpha, beta, false);
+      //const = moveH + Math.max(value, next.score);
+      if (moveH < 0) {
+        value = moveH;
       }
+      if (min.score > value) {
+        value = min.score;
+        move = pm.coord;
+      }
+      if (value >= beta) {
+        log("max pruning");
+        break;
+      }
+      alpha = Math.max(alpha, value);
     }
-    return value;
+    //log({ score: value, move });
+    return { score: value, move };
   } else {
     let value = Infinity;
 
-    const clonedGS = cloneGameState(ns);
-    const otherSnakes = clonedGS.board.snakes.filter(
-      (s) => s.id !== clonedGS.you.id
-    );
+    const enemy = board.snakes.find((s) => s.id !== you.id);
+    if (enemy) {
+      const enemyMove = getMoves(grid, enemy.body, isWrapped);
+      for (const pm of enemyMove) {
+        const ns = cloneGameState(gs);
+        addMove(ns, enemy, pm.coord);
 
-    // get all enemy snakes with their moves
-    // put the moves for each snake in their own queue
-    // loop i < 4 (max number of moves a snake can have)
-    // loop through each snake, dequeue a move, and make that move
-    // call minimax
-    const snakesWithMoves = otherSnakes.map((snake) => ({
-      snake,
-      moves: createQueue(getMoves(grid, snake.body, isWrapped)),
-    }));
-
-    // current issue: possible moves are being determined after my snake has made its move
-    // so any spot my snake moves is no longer considered a valid move when evaluating enemy snakes
-    for (let i = 0; i < 4; i++) {
-      const ns = cloneGameState(clonedGS);
-      for (const sm of snakesWithMoves) {
-        const move = sm.moves.dequeue();
-        if (move) {
-          addMove(ns, sm.snake, move.coord);
-        } else {
-          addMove(ns, sm.snake, {
-            x: sm.snake.head.x - 1,
-            y: sm.snake.head.y,
-          }); //no moves, go left
+        const nextTurn = resolveTurn(ns);
+        const max = alphabeta(nextTurn, pm.coord, depth - 1, alpha, beta, true);
+        //value = Math.min(value, max.score);
+        if (max.score < value) {
+          value = max.score;
+          move = pm.coord;
         }
+        if (value <= alpha) {
+          log(`min prunning`);
+          break;
+        }
+        beta = Math.min(beta, value);
       }
-      value = Math.min(value, minimax(resolveTurn(ns), depth - 1, true));
+    } else {
+      // for solo
+      const ns = cloneGameState(gs);
+      const nextTurn = resolveTurn(ns);
+      const max = alphabeta(nextTurn, move, depth - 1, alpha, beta, true);
+      //value = Math.min(value, max.score);
+      if (max.score < value) {
+        value = max.score;
+        move = move;
+      }
+      beta = Math.min(beta, value);
     }
 
-    //for (const snake of otherSnakes) {
-    //const moves = getMoves(grid, snake.body, isWrapped);
-    //if (moves.length > 0) {
-    //makeMove(clonedGS, snake, moves[0].coord);
-    //console.log(`enemy move`, moves[0]);
-    //} else {
-    //const head = snake.head;
-    //console.log(`enemy going left`);
-    //makeMove(clonedGS, snake, { x: head.x - 1, y: head.y }); //no moves, go left
-    //}
-    //}
-
-    return value;
+    return { score: value, move };
   }
 };
 
-export const determineMove = (state: GameState): Coord => {
+export const determineMove = (state: GameState, depth: number = 2): Coord => {
   const board = state.board;
-  const you = state.you;
   const isWrapped = state.game.ruleset.name === "wrapped";
   const grid = createGrid(board);
-  const possibleMoves = getMoves(grid, you.body, isWrapped);
-  const ns = cloneGameState({ ...state, pendingMoves: [] });
+  const ns = cloneGameState({ ...state, pendingMoves: [], isWrapped, grid });
 
-  //const [bestMove, ...rest] = possibleMoves
-  //.map((move) => ({ move, score: nodeHeuristic(grid, state, move) }))
+  //const perms = createGameStatePermutations(ns);
+
+  //const [bestMove, ...rest] = perms
+  //.map((p) => {
+  //return {
+  //move: p.move,
+  //score: alphabeta(resolveTurn(p.gs), depth, -Infinity, Infinity, true),
+  //};
+  //})
   //.sort((a, b) => b.score - a.score);
-  const time = Date.now();
-  const [bestMove, ...rest] = possibleMoves
-    .map((move) => {
-      return { move, score: minimax(ns, 2, true, move) };
-    })
-    .sort((a, b) => b.score - a.score);
 
-  return bestMove?.move.coord;
+  const move = alphabeta(ns, ns.you.head, depth, -Infinity, Infinity, true);
+  return move.move;
 };

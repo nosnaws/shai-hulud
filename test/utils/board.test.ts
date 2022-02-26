@@ -48,25 +48,6 @@ describe("utils/board", () => {
     });
   });
 
-  describe("getMove", () => {
-    it("won't move backward", () => {
-      // _ _ _
-      // _ _ h
-      // _ _ s
-
-      const snake = createSnake([
-        { x: 2, y: 1 },
-        { x: 2, y: 0 },
-      ]);
-
-      const grid = createGrid(createBoard(3, [], [snake]));
-      const neighbors = getMoves(grid, snake.body, false);
-      expect(neighbors).toHaveLength(2);
-      expect(neighbors[0].coord).toEqual({ x: 2, y: 2 });
-      expect(neighbors[1].coord).toEqual({ x: 1, y: 1 });
-    });
-  });
-
   describe("getNeighbors", () => {
     it("returns values on grid", () => {
       const grid = createGrid(createBoard(3));

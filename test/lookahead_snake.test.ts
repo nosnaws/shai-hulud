@@ -1,8 +1,49 @@
-import { determineMove, voronoriCounts } from "../src/lookahead_snake";
+import {
+  determineMove,
+  voronoriCounts,
+  voronoi,
+  alphabeta,
+} from "../src/lookahead_snake";
 import { createBoard, createGameState, createSnake } from "./utils";
 import { createGrid } from "../src/utils/board";
+import { resolveTurn } from "../src/utils/game_sim";
 
 describe("alphabeta", () => {
+  describe("voronoi", () => {
+    it("returns count for 1 snake", () => {
+      // _ _ _
+      // _ _ _
+      // h _ _
+      const snake1 = createSnake([{ x: 0, y: 0 }]);
+      const board = createBoard(3, [], [snake1]);
+      const gs = createGameState(board, snake1, 1, "solo");
+      const count = voronoi(gs);
+      expect(count).toBe(8);
+    });
+
+    it("returns counts for 2 snakes", () => {
+      // _ _ _ _ _
+      // _ _ _ h s
+      // _ _ _ _ s
+      // _ _ _ _ _
+      // k e e _ _
+      const snake1 = createSnake([
+        { x: 3, y: 3 },
+        { x: 4, y: 3 },
+        { x: 4, y: 2 },
+      ]);
+      const snake2 = createSnake([
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 2, y: 0 },
+      ]);
+      const board = createBoard(5, [], [snake1, snake2]);
+      const gs = createGameState(board, snake1);
+      const count = voronoi(gs);
+      expect(count).toBe(15);
+    });
+  });
+
   describe("voronoriCounts", () => {
     it("returns count for 1 snake", () => {
       const snake1 = createSnake([{ x: 0, y: 0 }]);
@@ -198,38 +239,28 @@ describe("alphabeta", () => {
       expect(Date.now() - time).toBeLessThan(400);
     });
 
-    it("doesn't get get itself stuck", () => {
-      const snake = createSnake([
-        { x: 3, y: 0 }, // _ _ _ _ _
-        { x: 3, y: 1 }, // _ _ _ _ _
-        { x: 3, y: 2 }, // _ _ _ _ _
-        { x: 2, y: 2 }, // _ s s s _
-        { x: 1, y: 2 }, // _ s _ s _
-        { x: 1, y: 1 }, // _ s s h _
-        { x: 1, y: 0 },
-        { x: 2, y: 0 },
-      ]);
-      const gameState = createGameState(
-        createBoard(5, [{ x: 0, y: 4 }], [snake]),
-        snake
-      );
-
-      const move = determineMove(gameState);
-      expect(move).toEqual({ x: 4, y: 0 });
-    });
-
     it("chooses to eat food", () => {
-      const snake = createSnake([
-        { x: 1, y: 2 }, // _ _ _ _ _
-        { x: 1, y: 1 }, // _ _ _ _ _
-        { x: 1, y: 0 }, // _ f _ _ _
-        { x: 1, y: 0 }, // _ h _ _ _
-        { x: 2, y: 0 }, // _ s _ _ _
-        { x: 3, y: 0 }, // _ s s s s
+      const snake = createSnake(
+        [
+          { x: 1, y: 2 },
+          { x: 1, y: 1 }, // _ _ _ _ e
+          { x: 1, y: 0 }, // _ f _ _ e
+          { x: 2, y: 0 }, // _ h _ _ e
+          { x: 3, y: 0 }, // _ s _ _ _
+          { x: 4, y: 0 }, // _ s s s s
+        ],
+        { health: 2 }
+      );
+      const snake2 = createSnake([
+        { x: 4, y: 4 },
+        { x: 4, y: 3 },
+        { x: 4, y: 2 },
       ]);
       const gameState = createGameState(
         createBoard(5, [{ x: 1, y: 3 }], [snake]),
-        snake
+        snake,
+        2,
+        "solo"
       );
 
       const move = determineMove(gameState);
@@ -257,7 +288,7 @@ describe("alphabeta", () => {
       expect(move).not.toEqual({ x: 0, y: 2 });
     });
 
-    it("doesn't get get itself stuck", () => {
+    it("doesn't get get itself stuck 11x11", () => {
       const snake = createSnake([
         { x: 0, y: 4 }, // _ _ _ _ _ _ _ _ _ _ _
         { x: 1, y: 4 }, // _ _ _ _ f _ _ _ _ _ _
@@ -294,7 +325,9 @@ describe("alphabeta", () => {
           ],
           [snake]
         ),
-        snake
+        snake,
+        2,
+        "solo"
       );
 
       const move = determineMove(gameState);
@@ -484,6 +517,7 @@ describe("alphabeta", () => {
           { x: 6, y: 0 },
           { x: 6, y: 1 },
           { x: 6, y: 2 },
+          { x: 6, y: 2 },
         ],
         { health: 99 }
       );
@@ -499,7 +533,7 @@ describe("alphabeta", () => {
       expect(move).not.toEqual({ x: 6, y: 2 });
     });
 
-    it.skip("chooses life over zoning", () => {
+    it("chooses life over zoning", () => {
       // _ _ _ _ _ _ f _ _ _ _
       // _ _ _ _ _ _ _ _ f _ _
       // f f _ _ _ _ _ _ _ _ _
@@ -564,25 +598,116 @@ describe("alphabeta", () => {
       // _ _ _ _ x
       // _ _ _ _ h
       // _ _ _ _ s
-      // _ _ _ _ _
+      // _ _ _ _ s
       // h = my head, x = hazard
 
       const me = createSnake(
         [
           { x: 4, y: 2 },
           { x: 4, y: 1 },
+          { x: 4, y: 0 },
         ],
         { health: 16 }
       );
       const hazards = [{ x: 4, y: 3 }];
       const gameState = createGameState(
-        createBoard(5, [{ x: 0, y: 2 }], [me], hazards),
+        createBoard(5, [{ x: 4, y: 4 }], [me], hazards),
         me,
         1,
         "solo"
       );
       const move = determineMove(gameState);
-      expect(move).toEqual({ x: 3, y: 2 });
+      expect(move).not.toEqual({ x: 4, y: 3 });
+    });
+
+    it("returns -infinity for death move", () => {
+      // _ _ _ _ _
+      // _ _ e e h
+      // _ _ _ _ s
+      // _ _ _ _ s
+      // _ _ _ _ s
+      // h = my head, x = hazard
+
+      const snake1 = createSnake(
+        [
+          { x: 4, y: 3 },
+          { x: 4, y: 2 },
+          { x: 4, y: 1 },
+          { x: 4, y: 0 },
+        ],
+        { health: 16 }
+      );
+
+      const me = createSnake(
+        [
+          { x: 4, y: 3 },
+          { x: 3, y: 3 },
+          { x: 2, y: 3 },
+        ],
+        { health: 16 }
+      );
+      const gameState = createGameState(
+        createBoard(5, [], [snake1, me]),
+        me,
+        1,
+        "standard"
+      );
+      const state = resolveTurn(gameState);
+      console.log(JSON.stringify(state, null, 2));
+      const score = alphabeta(
+        state,
+        state.you.head,
+        2,
+        -Infinity,
+        Infinity,
+        true
+      );
+      expect(score.score).toBe(-Infinity);
+    });
+
+    it("returns infinity for win move", () => {
+      // _ _ _ _ _
+      // _ _ e e h
+      // _ _ _ _ s
+      // _ _ _ _ s
+      // _ _ _ _ s
+      // h = my head, x = hazard
+
+      const me = createSnake(
+        [
+          { x: 4, y: 3 },
+          { x: 4, y: 2 },
+          { x: 4, y: 1 },
+          { x: 4, y: 0 },
+        ],
+        { health: 16 }
+      );
+
+      const snake2 = createSnake(
+        [
+          { x: 4, y: 3 },
+          { x: 3, y: 3 },
+          { x: 2, y: 3 },
+        ],
+        { health: 16 }
+      );
+      const gameState = createGameState(
+        createBoard(5, [], [me, snake2]),
+        me,
+        1,
+        "standard"
+      );
+      const state = resolveTurn(gameState);
+      console.log(JSON.stringify(state, null, 2));
+      const score = alphabeta(
+        state,
+        state.you.head,
+        2,
+        -Infinity,
+        Infinity,
+        true
+      );
+      expect(score.score).toBe(Infinity);
     });
   });
 });
