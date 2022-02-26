@@ -284,27 +284,34 @@ const stateHeuristic = (gs: GameStateSim): number => {
   }));
 
   if (didWeWinBoys(gs, you)) {
-    printGrid(gs.grid);
+    //printGrid(gs.grid);
     log("we win");
     return Infinity;
   }
 
   if (didWeLoseSadBoys(gs, you)) {
-    printGrid(gs.grid);
+    //printGrid(gs.grid);
     log("we lose");
     return -Infinity;
   }
 
   total += 10000 / board.snakes.length ?? 1;
-  const foodPaths = board.food.map((f) => BFS(grid, you.head, f));
+  const foodPaths = board.food
+    .map((f) => BFS(grid, you.head, f))
+    .sort((a, b) => a.length - b.length);
   const a = 40; // much hungrier in the beginning
   const b = 2;
-  foodPaths.forEach((foodPath) => {
-    // TODO: handle hazards when there isn't food, could also factor in the number of hazard spaces on the path
-    const foodDistanceCost = headNode.hasHazard ? 16 : 1;
-    total +=
-      a * Math.atan(you.health - (foodPath.length * foodDistanceCost) / b);
-  });
+  for (let i = 0; i < 3; i++) {
+    const foodPath = foodPaths[i];
+    if (foodPath) {
+      total += a * Math.atan(you.health - foodPath.length / b);
+    }
+  }
+  //foodPaths.forEach((foodPath) => {
+  //// TODO: handle hazards when there isn't food, could also factor in the number of hazard spaces on the path
+  ////const foodDistanceCost = headNode.hasHazard ? 16 : 1;
+  //total += a * Math.atan(you.health - foodPath.length / b);
+  //});
   //if (headNode.hasFood) {
   //total += 100;
   //}
@@ -313,7 +320,7 @@ const stateHeuristic = (gs: GameStateSim): number => {
 
   log(`voronoi for ${you.head.x},${you.head.y} score:${voronoiScore}`);
   if (voronoiScore) {
-    total += voronoiScore * 60; // should be a hyper parameter
+    total += voronoiScore * 10; // should be a hyper parameter
   }
 
   for (const pm of snakesWithMoves) {

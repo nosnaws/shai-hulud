@@ -28,7 +28,7 @@ export function end(gameState: GameState): void {
 export function move(state: GameState): MoveResponse {
   logger.info(`${state.game.id} MOVE`);
 
-  const moveCoord = determineMove(state, 4);
+  const moveCoord = determineMove(state, 5);
   const moveRes = getMoveResponse(moveCoord, state);
   logger.info(`${state.game.id} MOVE ${state.turn}: ${moveRes.move}`);
   return moveRes;
