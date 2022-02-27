@@ -1,6 +1,6 @@
 import { Battlesnake, Board, Coord, Ruleset } from "../types";
 import { log, prop } from "./general";
-import { createQueue } from "./queue";
+import { createQueue, Queue } from "./queue";
 
 export interface Node {
   coord: Coord;
@@ -180,6 +180,22 @@ export const hasDuplicates = (coords: Coord[]): boolean => {
   }
 
   return false;
+};
+
+export const getClosestSnake = (
+  grid: Grid,
+  root: Coord,
+  snakes: Battlesnake[],
+  isWrapped = false
+): Battlesnake | undefined => {
+  const snakePaths = snakes
+    .map((s) => ({ snake: s, path: BFS(grid, root, s.head, isWrapped) }))
+    .filter((sp) => sp.path.length < 1)
+    .sort((a, b) => a.path.length - b.path.length);
+
+  if (snakePaths[0]) {
+    return snakePaths[0].snake;
+  }
 };
 
 export const printGrid = (grid: Grid) => {

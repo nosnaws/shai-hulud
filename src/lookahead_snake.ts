@@ -10,6 +10,7 @@ import {
   getNeighbors,
   printGrid,
   hasDuplicates,
+  getClosestSnake,
 } from "./utils/board";
 import {
   cloneGameState,
@@ -113,160 +114,6 @@ export const voronoi = (gs: GameStateSim): number => {
   // add to count
   // add to visited
   // add to queue
-};
-
-/**
- * Counts a node as 'owned' if a root can reach it before any other roots.
- * returns each root with the total number of owned nodes for that root.
- * Does not factor in moving backward (illegal in battlesnake), which may cause some issues with snakes of length 2.
- **/
-export const voronoriCounts = (
-  grid: Grid,
-  roots: Coord[]
-): { root: Coord; score: number }[] => {
-  const height = grid.length;
-  const width = grid[0].length;
-  const scores = roots.map((root) => ({ root, score: 0 }));
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const node = grid[y][x];
-      if (node.hasSnake && !node.hasSnakeTail) {
-        continue;
-      }
-
-      const pathsAsc = roots
-        .map((r) => BFS(grid, r, node.coord))
-        .filter((p) => p.length > 0)
-        .sort((a, b) => a.length - b.length);
-      const [p1, p2] = pathsAsc;
-
-      if (!p1 || (p2 && p1.length === p2.length)) {
-        // space unreachable or is unowned
-        continue;
-      }
-
-      const isOwner = isCoordEqual(p1[0].coord);
-      const ownerScore = scores.find((s) => isOwner(s.root));
-      if (ownerScore) {
-        ownerScore.score += 1;
-      }
-    }
-  }
-
-  return scores;
-};
-
-export const voronoriCountsCrowFlies = (
-  grid: Grid,
-  roots: Coord[]
-): { root: Coord; score: number }[] => {
-  const height = grid.length;
-  const width = grid[0].length;
-  const scores = roots.map((root) => ({ root, score: 0 }));
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const node = grid[y][x];
-      if (node.hasSnake && !node.hasSnakeTail) {
-        continue;
-      }
-
-      const pathsAsc = roots
-        .map((r) => ({
-          root: r,
-          distance: Math.sqrt(
-            Math.pow(r.x - node.coord.x, 2) + Math.pow(r.y - node.coord.y, 2)
-          ),
-        }))
-        .sort((a, b) => a.distance - b.distance);
-      const [p1, p2] = pathsAsc;
-
-      const isOwner = isCoordEqual(p1.root);
-      const ownerScore = scores.find((s) => isOwner(s.root));
-      if (ownerScore) {
-        ownerScore.score += 1;
-      }
-    }
-  }
-
-  return scores;
-};
-
-const nodeHeuristic = (
-  grid: Grid,
-  { board, you, game, turn }: GameState,
-  node: Node,
-  runVoronoi: boolean = true
-): number => {
-  const isWrapped = game.ruleset.name === "wrapped";
-  let total = 0;
-  const snakes = board.snakes;
-  const food = board.food;
-  const isCurrent = isCoordEqual(node.coord);
-  const enemySnakes = snakes.filter((s) => s.id !== you.id);
-  const snakesWithMoves: {
-    snake: Battlesnake;
-    possibleMoves: Node[];
-  }[] = enemySnakes.map((s) => ({
-    snake: s,
-    possibleMoves: getMoves(grid, s.body, isWrapped),
-  }));
-  const smallerSnakes = snakesWithMoves.filter(
-    ({ snake }) => snake.length < you.length
-  );
-  const largerSnakes = snakesWithMoves.filter(
-    ({ snake }) => snake.length >= you.length
-  );
-  const isPossibleKillMove =
-    smallerSnakes
-      .flatMap(prop("possibleMoves"))
-      .map(prop("coord"))
-      .filter(isCurrent).length > 0;
-
-  const isPossibleDeathMove =
-    largerSnakes
-      .flatMap(prop("possibleMoves"))
-      .map(prop("coord"))
-      .filter(isCurrent).length > 0;
-
-  if (isPossibleKillMove) {
-    total += 1000;
-  }
-
-  if (isPossibleDeathMove) {
-    total += -10000;
-  }
-
-  // Factor in distance to food
-  const orderedFood = food
-    .map((f) => BFS(grid, node.coord, f))
-    .sort((a, b) => a.length - b.length);
-  const a = 60; // much hungrier in the beginning
-  const b = turn < 60 ? 1 : 5;
-  orderedFood.forEach((foodPath) => {
-    // TODO: handle hazards when there isn't food, could also factor in the number of hazard spaces on the path
-    const foodDistance = foodPath.length;
-    total += a * Math.atan(you.health - foodDistance / b);
-  });
-
-  if (runVoronoi) {
-    const voronoiScores = voronoriCountsCrowFlies(grid, [
-      node.coord,
-      ...enemySnakes.map(prop("head")),
-    ]);
-    const voronoiScore = voronoiScores.find((s) => isCurrent(s.root));
-
-    if (voronoiScore) {
-      total += voronoiScore.score * 1; // should be a hyper parameter
-    }
-  }
-
-  if (node.hasHazard) {
-    total = total / 26;
-  }
-
-  return total;
 };
 
 const stateHeuristic = (gs: GameStateSim): number => {
@@ -436,12 +283,13 @@ export const alphabeta = (
   } else {
     let value = Infinity;
 
-    const enemy = board.snakes.find((s) => s.id !== you.id);
-    if (enemy) {
-      const enemyMove = getMoves(grid, enemy.body, isWrapped);
+    const enemySnakes = board.snakes.filter((s) => s.id !== you.id);
+    const closestSnake = getClosestSnake(grid, move, enemySnakes, isWrapped);
+    if (closestSnake) {
+      const enemyMove = getMoves(grid, closestSnake.body, isWrapped);
       for (const pm of enemyMove) {
         const ns = cloneGameState(gs);
-        addMove(ns, enemy, pm.coord);
+        addMove(ns, closestSnake, pm.coord);
 
         const nextTurn = resolveTurn(ns);
         const max = alphabeta(nextTurn, move, depth - 1, alpha, beta, true);

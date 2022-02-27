@@ -1,9 +1,4 @@
-import {
-  determineMove,
-  voronoriCounts,
-  voronoi,
-  alphabeta,
-} from "../src/lookahead_snake";
+import { determineMove, voronoi, alphabeta } from "../src/lookahead_snake";
 import { createBoard, createGameState, createSnake } from "./utils";
 import { createGrid } from "../src/utils/board";
 import { resolveTurn } from "../src/utils/game_sim";
@@ -41,65 +36,6 @@ describe("alphabeta", () => {
       const gs = createGameState(board, snake1);
       const count = voronoi(gs);
       expect(count).toBe(15);
-    });
-  });
-
-  describe("voronoriCounts", () => {
-    it("returns count for 1 snake", () => {
-      const snake1 = createSnake([{ x: 0, y: 0 }]);
-      const grid = createGrid(createBoard(3, [], [snake1]));
-      const [vCounts] = voronoriCounts(grid, [{ x: 0, y: 0 }]);
-      expect(vCounts.score).toBe(9);
-    });
-
-    it("returns counts for 2 snakes", () => {
-      // _ _ _ _ _
-      // _ _ _ h s
-      // _ _ _ _ s
-      // _ _ _ _ _
-      // k e e _ _
-      const snake1 = createSnake([
-        { x: 3, y: 3 },
-        { x: 4, y: 3 },
-        { x: 4, y: 2 },
-      ]);
-      const snake2 = createSnake([
-        { x: 0, y: 0 },
-        { x: 1, y: 0 },
-        { x: 2, y: 0 },
-      ]);
-      const grid = createGrid(createBoard(5, [], [snake1, snake2]));
-      const [s1VCount, s2VCount] = voronoriCounts(grid, [
-        snake1.head,
-        snake2.head,
-      ]);
-      console.log(s1VCount, s2VCount);
-      expect(s1VCount.score).toBe(13);
-      expect(s2VCount.score).toBe(3);
-    });
-
-    it("returns counts that include snake going backwards, DELETE ME WHEN FIXED AND THIS TEST FAILS", () => {
-      // _ _ _ _ _
-      // _ _ _ h s
-      // _ _ _ _ _
-      // _ _ _ _ _
-      // k e _ _ _
-      const snake1 = createSnake([
-        { x: 3, y: 3 },
-        { x: 4, y: 3 },
-      ]);
-      const snake2 = createSnake([
-        { x: 0, y: 0 },
-        { x: 1, y: 0 },
-      ]);
-      const grid = createGrid(createBoard(5, [], [snake1, snake2]));
-      const [s1VCount, s2VCount] = voronoriCounts(grid, [
-        snake1.head,
-        snake2.head,
-      ]);
-      console.log(s1VCount, s2VCount);
-      expect(s1VCount.score).toBe(12); // Should actually be 14
-      expect(s2VCount.score).toBe(5); // Should actually be 4
     });
   });
 
