@@ -23,6 +23,7 @@ import {
 
 import { log } from "./utils/general";
 import { createQueue, Queue } from "./utils/queue";
+const coordStr = (c: Coord) => `${c?.x},${c?.y}`;
 
 export const voronoi = (gs: GameStateSim): number => {
   interface Pair {
@@ -270,18 +271,9 @@ const nodeHeuristic = (
 
 const stateHeuristic = (gs: GameStateSim): number => {
   const { you, board, turn, grid } = gs;
-  const headNode = grid[you.head.y][you.head.x];
   const otherSnakes = gs.board.snakes.filter((s) => s.id !== gs.you.id);
 
   let total = 0;
-  const isHead = isCoordEqual(you.head);
-  const snakesWithMoves: {
-    snake: Battlesnake;
-    possibleMoves: Node[];
-  }[] = otherSnakes.map((s) => ({
-    snake: s,
-    possibleMoves: getMoves(grid, s.body, gs.isWrapped),
-  }));
 
   if (didWeWinBoys(gs, you)) {
     //printGrid(gs.grid);
@@ -295,55 +287,61 @@ const stateHeuristic = (gs: GameStateSim): number => {
     return -Infinity;
   }
 
-  total += 10000 / board.snakes.length ?? 1;
+  total += 10000 / otherSnakes.length ?? 1;
   const foodPaths = board.food
     .map((f) => BFS(grid, you.head, f))
     .sort((a, b) => a.length - b.length);
-  const a = 40; // much hungrier in the beginning
-  const b = 2;
-  for (let i = 0; i < 3; i++) {
+  const a = -60; // much hungrier in the beginning
+  const b = 1;
+  for (let i = 0; i < foodPaths.length; i++) {
     const foodPath = foodPaths[i];
     if (foodPath) {
       total += a * Math.atan(you.health - foodPath.length / b);
     }
   }
-  //foodPaths.forEach((foodPath) => {
-  //// TODO: handle hazards when there isn't food, could also factor in the number of hazard spaces on the path
-  ////const foodDistanceCost = headNode.hasHazard ? 16 : 1;
-  //total += a * Math.atan(you.health - foodPath.length / b);
-  //});
-  //if (headNode.hasFood) {
-  //total += 100;
-  //}
 
   const voronoiScore = voronoi(gs);
 
-  log(`voronoi for ${you.head.x},${you.head.y} score:${voronoiScore}`);
+  //log(`voronoi for ${you.head.x},${you.head.y} score:${voronoiScore}`);
   if (voronoiScore) {
-    total += voronoiScore * 10; // should be a hyper parameter
+    total += voronoiScore * 1; // should be a hyper parameter
   }
 
+  //log(`head:${you.head.x},${you.head.y} total:${total}`);
+  return total;
+};
+
+const pathHeuristic = (gs: GameStateSim, move: Coord): number => {
+  const { you, grid } = gs;
+  const otherSnakes = gs.board.snakes.filter((s) => s.id !== gs.you.id);
+  const moveNode = grid[move.y][move.x];
+
+  let total = 0;
+  const isMove = isCoordEqual(move);
+  const snakesWithMoves: {
+    snake: Battlesnake;
+    possibleMoves: Node[];
+  }[] = otherSnakes.map((s) => ({
+    snake: s,
+    possibleMoves: getMoves(grid, s.body, gs.isWrapped),
+  }));
+
   for (const pm of snakesWithMoves) {
-    if (pm.possibleMoves.map(prop("coord")).some(isHead)) {
+    if (pm.possibleMoves.map(prop("coord")).some(isMove)) {
       if (pm.snake.length >= you.length) {
-        log(`possible death move:${you.head.x},${you.head.y}`);
-        total = -10000;
-      }
-      if (pm.snake.length < you.length) {
-        total = total * 1000;
+        log(`possible death move:${coordStr(move)}`);
+        total += -10000000; //change this since it's just a possible move
       }
     }
   }
 
-  if (headNode.hasHazard) {
-    total += -Math.atan(you.health / 16);
+  if (moveNode.hasHazard) {
+    total += -Math.atan(you.health / 5);
   }
 
-  if (headNode.hasSnakeTail && hasDuplicates(headNode.snake?.body ?? [])) {
+  if (moveNode.hasSnakeTail && hasDuplicates(moveNode.snake?.body ?? [])) {
     total = -Infinity;
   }
-
-  log(`head:${you.head.x},${you.head.y} total:${total}`);
   return total;
 };
 
@@ -387,18 +385,40 @@ export const alphabeta = (
   if (maximizingPlayer) {
     let value = -Infinity;
 
-    for (const pm of getMoves(grid, you.body, isWrapped)) {
+    const n = getMoves(grid, you.body, isWrapped);
+    log(`moves at depth:${depth}`);
+    log(n);
+    for (const pm of n) {
       const ns = cloneGameState(gs);
-      log(`testing move:${pm.coord.x},${pm.coord.y}`);
+      log(`testing move:${coordStr(pm.coord)} depth:${depth}`);
       addMove(ns, you, pm.coord);
 
-      const moveH = stateHeuristic(ns);
+      const moveH = pathHeuristic(ns, pm.coord);
       const min = alphabeta(ns, pm.coord, depth - 1, alpha, beta, false);
+
       //const = moveH + Math.max(value, next.score);
+
       if (moveH < 0) {
-        value = moveH;
+        log(
+          `moveH override for ${coordStr(
+            pm.coord
+          )} depth:${depth} move:${coordStr(move)}`
+        );
+        min.score = moveH;
       }
+
+      log(
+        `comparing score:${value} move:${coordStr(move)} to score:${
+          min.score
+        } move:${coordStr(min.move)} depth:${depth}`
+      );
       if (min.score > value) {
+        log(
+          `taking higher score:${min.score} move:${coordStr(
+            min.move
+          )} depth:${depth}`
+        );
+        log(`setting move to parent:${coordStr(pm.coord)}`);
         value = min.score;
         move = pm.coord;
       }
@@ -409,6 +429,9 @@ export const alphabeta = (
       alpha = Math.max(alpha, value);
     }
     //log({ score: value, move });
+    log(`return max score:${value} move:${coordStr(move)} depth:${depth}`);
+    //
+    // TODO: if all the moves are terrible, it can return it's own head
     return { score: value, move };
   } else {
     let value = Infinity;
@@ -421,11 +444,15 @@ export const alphabeta = (
         addMove(ns, enemy, pm.coord);
 
         const nextTurn = resolveTurn(ns);
-        const max = alphabeta(nextTurn, pm.coord, depth - 1, alpha, beta, true);
+        const max = alphabeta(nextTurn, move, depth - 1, alpha, beta, true);
         //value = Math.min(value, max.score);
         if (max.score < value) {
+          log(
+            `taking lower score:${max.score} move:${coordStr(
+              max.move
+            )} depth:${depth}`
+          );
           value = max.score;
-          move = pm.coord;
         }
         if (value <= alpha) {
           log(`min prunning`);
@@ -446,6 +473,7 @@ export const alphabeta = (
       beta = Math.min(beta, value);
     }
 
+    log(`return max score:${value} move:${coordStr(move)} depth:${depth}`);
     return { score: value, move };
   }
 };
@@ -455,7 +483,7 @@ export const determineMove = (state: GameState, depth: number = 2): Coord => {
   const isWrapped = state.game.ruleset.name === "wrapped";
   const grid = createGrid(board);
   const ns = cloneGameState({ ...state, pendingMoves: [], isWrapped, grid });
-
+  log(`starting ${state.game.ruleset.name} game`);
   //const perms = createGameStatePermutations(ns);
 
   //const [bestMove, ...rest] = perms
@@ -466,7 +494,14 @@ export const determineMove = (state: GameState, depth: number = 2): Coord => {
   //};
   //})
   //.sort((a, b) => b.score - a.score);
-
+  //const moves = getMoves(grid, ns.you.body, isWrapped)
+  //.map((m) => {
+  //log(m.coord);
+  //return m;
+  //})
+  //.map((m) => alphabeta(ns, m.coord, depth, -Infinity, Infinity, true))
+  //.sort((a, b) => b.score - a.score);
   const move = alphabeta(ns, ns.you.head, depth, -Infinity, Infinity, true);
-  return move.move;
+  log(move);
+  return move?.move;
 };

@@ -1,5 +1,5 @@
 import { Battlesnake, Board, Coord, Ruleset } from "../types";
-import { prop } from "./general";
+import { log, prop } from "./general";
 import { createQueue } from "./queue";
 
 export interface Node {
@@ -138,10 +138,20 @@ export const adjustForWrapped = (
   height: number,
   width: number
 ): Coord[] =>
-  coords.map(({ x, y }) => ({
-    x: x % width,
-    y: y % height,
-  }));
+  coords
+    .map(({ x, y }) => ({
+      x: x % width,
+      y: y % height,
+    }))
+    .map(({ x, y }) => {
+      if (x < 0) {
+        x = width - 1;
+      }
+      if (y < 0) {
+        y = height - 1;
+      }
+      return { x, y };
+    });
 
 export const isInArray = (coords: Coord[]) => (l: Coord): boolean =>
   coords.some(isCoordEqual(l));

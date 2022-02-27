@@ -49,6 +49,15 @@ describe("utils/board", () => {
   });
 
   describe("getNeighbors", () => {
+    it("returns wrapped values", () => {
+      const grid = createGrid(createBoard(3));
+      const neigbors = getNeighbors(grid, true)({ x: 0, y: 0 });
+      expect(neigbors).toHaveLength(4);
+      expect(neigbors[0].coord).toEqual({ x: 0, y: 1 });
+      expect(neigbors[1].coord).toEqual({ x: 1, y: 0 });
+      expect(neigbors[2].coord).toEqual({ x: 0, y: 2 });
+      expect(neigbors[3].coord).toEqual({ x: 2, y: 0 });
+    });
     it("returns values on grid", () => {
       const grid = createGrid(createBoard(3));
       const neigbors = getNeighbors(grid)({ x: 0, y: 0 });

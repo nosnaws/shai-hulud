@@ -533,6 +533,208 @@ describe("alphabeta", () => {
       expect(move).not.toEqual({ x: 6, y: 2 });
     });
 
+    it("doesn't go for the head to head and lose", () => {
+      // f _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ e e e
+      // _ _ _ _ _ _ f _ _ _ e
+      // _ _ _ _ _ _ _ _ _ _ e
+      // s s s s s h _ f _ _ e
+      // s f f _ _ _ h e e e e
+      // _ _ _ f _ _ _ _ _ f f
+      // f _ _ _ _ _ _ f _ _ f
+      // f _ _ _ _ _ f _ _ _ f
+      // _ _ _ _ _ _ _ _ _ f _
+      // _ _ _ _ f _ f _ _ _ f
+      // h = my head, k = enemy head
+
+      const me = createSnake(
+        [
+          { x: 5, y: 6 },
+          { x: 4, y: 6 },
+          { x: 3, y: 6 },
+          { x: 2, y: 6 },
+          { x: 1, y: 6 },
+          { x: 0, y: 6 },
+          { x: 0, y: 5 },
+        ],
+        { health: 77 }
+      );
+
+      const snake2 = createSnake(
+        [
+          { x: 6, y: 5 },
+          { x: 7, y: 5 },
+          { x: 8, y: 5 },
+          { x: 9, y: 5 },
+          { x: 10, y: 5 },
+          { x: 10, y: 6 },
+          { x: 10, y: 7 },
+          { x: 10, y: 8 },
+          { x: 10, y: 9 },
+          { x: 9, y: 9 },
+          { x: 8, y: 9 },
+        ],
+        { health: 54 }
+      );
+
+      const food = [
+        { x: 0, y: 10 },
+        { x: 6, y: 8 },
+        { x: 7, y: 6 },
+        { x: 0, y: 2 },
+        { x: 0, y: 3 },
+        { x: 1, y: 5 },
+        { x: 2, y: 5 },
+        { x: 3, y: 4 },
+        { x: 4, y: 0 },
+        { x: 6, y: 0 },
+        { x: 6, y: 2 },
+        { x: 7, y: 3 },
+        { x: 9, y: 4 },
+        { x: 10, y: 4 },
+        { x: 10, y: 3 },
+        { x: 10, y: 2 },
+        { x: 9, y: 1 },
+        { x: 10, y: 0 },
+      ];
+      const gameState = createGameState(
+        createBoard(11, food, [me, snake2]),
+        me,
+        109,
+        "wrapped"
+      );
+      const move = determineMove(gameState);
+      expect(move).not.toEqual({ x: 5, y: 5 });
+    });
+
+    it("sees wrapped moves", () => {
+      // ◦◦◦◦■■■⌀◦◦◦
+      // ■■■■■◦◦◦◦◦■
+      // ◦◦◦◦◦◦◦◦◦◦■
+      // ◦⌀⌀⌀◦◦◦◦◦◦■
+      // ◦⌀◦⌀⌀◦◦◦⚕◦■
+      // ⚕⌀◦⚕⌀◦◦◦◦◦■
+      // ⌀⌀◦⚕⌀⌀◦◦◦◦■
+      // ⌀⚕◦◦⌀⌀◦◦◦◦■
+      // ⌀⌀⌀⌀◦◦◦◦◦■■
+      // ⌀⌀⚕⌀⌀⌀⌀⌀⚕■◦
+      // ◦⚕■■■■■⌀◦◦◦
+      // _ _ _ _ s s s e _ _ _
+      // s s s s s _ _ _ _ _ s
+      // _ _ _ _ _ _ _ _ _ _ s
+      // _ e e e _ _ _ _ _ _ s
+      // _ e _ e e _ _ _ f _ s
+      // f e _ f e _ _ _ _ _ s
+      // e e _ f e e _ _ _ _ s
+      // e f _ _ e e _ _ _ _ s
+      // e e e e _ _ _ _ _ s s
+      // e e f e e e e e f s _
+      // _ f h s s s s e _ _ _
+      // h = my head, x = hazard
+
+      const me = createSnake(
+        [
+          { x: 2, y: 0 },
+          { x: 3, y: 0 },
+          { x: 4, y: 0 },
+          { x: 5, y: 0 },
+          { x: 6, y: 0 },
+          { x: 6, y: 10 },
+          { x: 5, y: 10 },
+          { x: 4, y: 10 },
+          { x: 4, y: 9 },
+          { x: 3, y: 9 },
+          { x: 2, y: 9 },
+          { x: 1, y: 9 },
+          { x: 0, y: 9 },
+          { x: 10, y: 9 },
+          { x: 10, y: 8 },
+          { x: 10, y: 7 },
+          { x: 10, y: 6 },
+          { x: 10, y: 5 },
+          { x: 10, y: 4 },
+          { x: 10, y: 3 },
+          { x: 10, y: 2 },
+          { x: 9, y: 2 },
+          { x: 9, y: 1 },
+        ],
+        { health: 97 }
+      );
+
+      // _ _ _ _ s s s k _ _ _
+      // s s s s s _ _ _ _ _ s
+      // _ _ _ _ _ _ _ _ _ _ s
+      // _ e e e _ _ _ _ _ _ s
+      // _ e _ e e _ _ _ f _ s
+      // f e _ f e _ _ _ _ _ s
+      // e e _ f e e _ _ _ _ s
+      // e f _ _ e e _ _ _ _ s
+      // e e e e _ _ _ _ _ s s
+      // e e f e e e e e f s _
+      // _ f h s s s s e _ _ _
+      // h = my head, x = hazard
+      const snake2 = createSnake(
+        [
+          { x: 7, y: 10 },
+          { x: 7, y: 0 },
+          { x: 7, y: 1 },
+          { x: 6, y: 1 },
+          { x: 5, y: 1 },
+          { x: 4, y: 1 },
+          { x: 3, y: 1 },
+          { x: 3, y: 2 },
+          { x: 2, y: 2 },
+          { x: 1, y: 2 },
+          { x: 1, y: 1 },
+          { x: 0, y: 1 },
+          { x: 0, y: 2 },
+          { x: 0, y: 3 },
+          { x: 0, y: 4 },
+          { x: 1, y: 4 },
+          { x: 1, y: 5 },
+          { x: 1, y: 6 },
+          { x: 1, y: 7 },
+          { x: 2, y: 7 },
+          { x: 3, y: 7 },
+          { x: 3, y: 6 },
+          { x: 4, y: 6 },
+          { x: 4, y: 5 },
+          { x: 4, y: 4 },
+          { x: 4, y: 3 },
+          { x: 5, y: 3 },
+          { x: 5, y: 4 },
+        ],
+        { health: 98 }
+      );
+
+      // _ _ _ _ s s s k _ _ _
+      // s s s s s _ _ _ _ _ s
+      // _ _ _ _ _ _ _ _ _ _ s
+      // _ e e e _ _ _ _ _ _ s
+      // _ e _ e e _ _ _ f _ s
+      // f e _ f e _ _ _ _ _ s
+      // e e _ f e e _ _ _ _ s
+      // e f _ _ e e _ _ _ _ s
+      // e e e e _ _ _ _ _ s s
+      // e e f e e e e e f s _
+      // _ f h s s s s e _ _ _
+      // h = my head, x = hazard
+      const food = [
+        { x: 1, y: 0 },
+        { x: 2, y: 1 },
+        { x: 8, y: 6 },
+        { x: 8, y: 1 },
+      ];
+      const gameState = createGameState(
+        createBoard(11, food, [me, snake2]),
+        me,
+        109,
+        "wrapped"
+      );
+      const move = determineMove(gameState);
+      expect(move).not.toEqual({ x: 2, y: 1 });
+    });
+
     it("chooses life over zoning", () => {
       // _ _ _ _ _ _ f _ _ _ _
       // _ _ _ _ _ _ _ _ f _ _
@@ -549,10 +751,10 @@ describe("alphabeta", () => {
 
       const me = createSnake(
         [
-          { x: 4, y: 6 },
-          { x: 5, y: 6 },
-          { x: 6, y: 6 },
-          { x: 6, y: 7 },
+          { x: 3, y: 4 },
+          { x: 4, y: 4 },
+          { x: 5, y: 4 },
+          { x: 5, y: 3 },
         ],
         { health: 3 }
       );
@@ -560,29 +762,29 @@ describe("alphabeta", () => {
         [
           { x: 4, y: 5 },
           { x: 5, y: 5 },
-          { x: 5, y: 4 },
-          { x: 6, y: 4 },
-          { x: 7, y: 4 },
-          { x: 8, y: 4 },
-          { x: 9, y: 4 },
-          { x: 10, y: 4 },
+          { x: 5, y: 6 },
+          { x: 6, y: 6 },
+          { x: 7, y: 6 },
+          { x: 8, y: 6 },
+          { x: 9, y: 6 },
+          { x: 10, y: 6 },
           { x: 10, y: 5 },
         ],
         { health: 98 }
       );
       const food = [
-        { x: 0, y: 8 },
-        { x: 1, y: 8 },
+        { x: 0, y: 2 },
         { x: 1, y: 2 },
-        { x: 3, y: 7 },
-        { x: 3, y: 1 },
-        { x: 4, y: 3 },
-        { x: 6, y: 10 },
-        { x: 6, y: 2 },
+        { x: 1, y: 8 },
+        { x: 3, y: 3 },
+        { x: 3, y: 9 },
+        { x: 4, y: 7 },
+        { x: 6, y: 0 },
+        { x: 6, y: 8 },
+        { x: 8, y: 1 },
         { x: 8, y: 9 },
-        { x: 8, y: 1 },
-        { x: 10, y: 1 },
-        { x: 8, y: 1 },
+        { x: 9, y: 9 },
+        { x: 10, y: 9 },
       ];
       const gameState = createGameState(
         createBoard(11, food, [me, snake2]),
@@ -590,7 +792,7 @@ describe("alphabeta", () => {
         109
       );
       const move = determineMove(gameState);
-      expect(move).toEqual({ x: 4, y: 7 });
+      expect(move).not.toEqual({ x: 3, y: 5 });
     });
 
     it("does not choose death by hazard", () => {
