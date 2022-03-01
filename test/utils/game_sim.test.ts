@@ -3,6 +3,7 @@ import {
   makeMove,
   resolveTurn,
   cloneGameState,
+  addMove,
 } from "../../src/utils/game_sim";
 
 describe("game_sim", () => {
@@ -191,7 +192,357 @@ describe("game_sim", () => {
       const newMove = { x: 2, y: 1 };
       makeMove(gs, s, newMove);
       const ns = resolveTurn(gs);
-      expect(ns.board.snakes[0].health).toEqual(84); // 1 for the turn, 15 for hazard
+      expect(ns.board.snakes[0].health).toEqual(85); // 1 for the turn, 15 for hazard
+    });
+
+    it("properly resolves collisions and hazard damage", () => {
+      const s = createSnake(
+        [
+          {
+            y: 9,
+            x: 9,
+          },
+          {
+            y: 9,
+            x: 8,
+          },
+          {
+            y: 9,
+            x: 7,
+          },
+          {
+            y: 8,
+            x: 7,
+          },
+          {
+            y: 8,
+            x: 6,
+          },
+          {
+            y: 7,
+            x: 6,
+          },
+          {
+            y: 6,
+            x: 6,
+          },
+        ],
+        { health: 42 }
+      );
+      const s2 = createSnake(
+        [
+          {
+            y: 10,
+            x: 8,
+          },
+          {
+            y: 10,
+            x: 7,
+          },
+          {
+            y: 10,
+            x: 6,
+          },
+          {
+            y: 10,
+            x: 5,
+          },
+          {
+            y: 10,
+            x: 4,
+          },
+          {
+            y: 10,
+            x: 3,
+          },
+          {
+            y: 10,
+            x: 2,
+          },
+          {
+            y: 10,
+            x: 1,
+          },
+          {
+            y: 9,
+            x: 1,
+          },
+          {
+            y: 8,
+            x: 1,
+          },
+          {
+            y: 8,
+            x: 2,
+          },
+          {
+            y: 8,
+            x: 3,
+          },
+          {
+            y: 8,
+            x: 4,
+          },
+          {
+            y: 8,
+            x: 5,
+          },
+          {
+            y: 7,
+            x: 5,
+          },
+          {
+            y: 7,
+            x: 4,
+          },
+          {
+            y: 7,
+            x: 3,
+          },
+        ],
+        { health: 10 }
+      );
+      const hazards = [
+        {
+          y: 0,
+          x: 0,
+        },
+        {
+          y: 1,
+          x: 0,
+        },
+        {
+          y: 2,
+          x: 0,
+        },
+        {
+          y: 3,
+          x: 0,
+        },
+        {
+          y: 4,
+          x: 0,
+        },
+        {
+          y: 5,
+          x: 0,
+        },
+        {
+          y: 6,
+          x: 0,
+        },
+        {
+          y: 7,
+          x: 0,
+        },
+        {
+          y: 8,
+          x: 0,
+        },
+        {
+          y: 9,
+          x: 0,
+        },
+        {
+          y: 10,
+          x: 0,
+        },
+        {
+          y: 0,
+          x: 1,
+        },
+        {
+          y: 1,
+          x: 1,
+        },
+        {
+          y: 9,
+          x: 1,
+        },
+        {
+          y: 10,
+          x: 1,
+        },
+        {
+          y: 0,
+          x: 2,
+        },
+        {
+          y: 1,
+          x: 2,
+        },
+        {
+          y: 9,
+          x: 2,
+        },
+        {
+          y: 10,
+          x: 2,
+        },
+        {
+          y: 0,
+          x: 3,
+        },
+        {
+          y: 1,
+          x: 3,
+        },
+        {
+          y: 9,
+          x: 3,
+        },
+        {
+          y: 10,
+          x: 3,
+        },
+        {
+          y: 0,
+          x: 4,
+        },
+        {
+          y: 1,
+          x: 4,
+        },
+        {
+          y: 9,
+          x: 4,
+        },
+        {
+          y: 10,
+          x: 4,
+        },
+        {
+          y: 0,
+          x: 5,
+        },
+        {
+          y: 1,
+          x: 5,
+        },
+        {
+          y: 9,
+          x: 5,
+        },
+        {
+          y: 10,
+          x: 5,
+        },
+        {
+          y: 0,
+          x: 6,
+        },
+        {
+          y: 1,
+          x: 6,
+        },
+        {
+          y: 9,
+          x: 6,
+        },
+        {
+          y: 10,
+          x: 6,
+        },
+        {
+          y: 0,
+          x: 7,
+        },
+        {
+          y: 1,
+          x: 7,
+        },
+        {
+          y: 9,
+          x: 7,
+        },
+        {
+          y: 10,
+          x: 7,
+        },
+        {
+          y: 0,
+          x: 8,
+        },
+        {
+          y: 1,
+          x: 8,
+        },
+        {
+          y: 9,
+          x: 8,
+        },
+        {
+          y: 10,
+          x: 8,
+        },
+        {
+          y: 0,
+          x: 9,
+        },
+        {
+          y: 1,
+          x: 9,
+        },
+        {
+          y: 9,
+          x: 9,
+        },
+        {
+          y: 10,
+          x: 9,
+        },
+        {
+          y: 0,
+          x: 10,
+        },
+        {
+          y: 1,
+          x: 10,
+        },
+        {
+          y: 9,
+          x: 10,
+        },
+        {
+          y: 10,
+          x: 10,
+        },
+      ];
+      const food = [
+        {
+          y: 4,
+          x: 0,
+        },
+        {
+          y: 7,
+          x: 9,
+        },
+        {
+          y: 2,
+          x: 2,
+        },
+        {
+          y: 10,
+          x: 9,
+        },
+        {
+          y: 4,
+          x: 5,
+        },
+        {
+          y: 3,
+          x: 8,
+        },
+      ];
+      const board = createBoard(11, food, [s, s2], hazards);
+      const gs = createGameState(board, s);
+      const sMove = { x: 9, y: 10 };
+      const s2Move = { x: 9, y: 10 };
+      addMove(gs, s, sMove);
+      addMove(gs, s2, s2Move);
+      const ns = resolveTurn(gs);
+      expect(ns.board.snakes).toHaveLength(1);
+      expect(ns.board.snakes[0].id).toEqual(s2.id);
     });
   });
 });

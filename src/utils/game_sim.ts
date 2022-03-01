@@ -1,6 +1,6 @@
 import { v4 as uuid } from "uuid";
 import { Battlesnake, Board, Coord, GameState, Game, Ruleset } from "../types";
-
+import { TURN_DAMAGE, HAZARD_DAMAGE } from "../constants";
 import { isCoordEqual, Grid, createGrid, printGrid } from "./board";
 import { placeFoodAutomatically } from "./food_spawning";
 import { log, prop } from "./general";
@@ -25,7 +25,7 @@ export const resolveTurn = (gs: GameStateSim): GameStateSim => {
   // remove tails and reduce health
   ns.board.snakes = ns.board.snakes.map((s) => {
     const isHazard = ns.board.hazards.some(isCoordEqual(s.head));
-    const turnDamage = isHazard ? 16 : 1;
+    const turnDamage = isHazard ? HAZARD_DAMAGE + TURN_DAMAGE : TURN_DAMAGE;
     return {
       ...s,
       health: s.health - turnDamage,
@@ -33,6 +33,15 @@ export const resolveTurn = (gs: GameStateSim): GameStateSim => {
     };
   });
 
+  // consume food
+  for (const s of ns.board.snakes) {
+    const isSnakeHead = isCoordEqual(s.head);
+    if (ns.board.food.find(isSnakeHead)) {
+      s.body = [...s.body, s.body[s.body.length - 1]]; // add body segment to end since the snake ate
+      s.health = 100;
+      ns.board.food = ns.board.food.filter(isSnakeHead);
+    }
+  }
   // handle food spawning
   placeFoodAutomatically(ns);
 
@@ -77,16 +86,6 @@ export const resolveTurn = (gs: GameStateSim): GameStateSim => {
     return true;
   });
   ns.board.snakes = snakesLeft;
-
-  // consume food
-  for (const s of ns.board.snakes) {
-    const isSnakeHead = isCoordEqual(s.head);
-    if (ns.board.food.find(isSnakeHead)) {
-      s.body = [...s.body, s.body[s.body.length - 1]]; // add body segment to end since the snake ate
-      s.health = 100;
-      ns.board.food = ns.board.food.filter(isSnakeHead);
-    }
-  }
 
   const updatedYou = ns.board.snakes.find((s) => s.id === ns.you.id);
   if (updatedYou) {
