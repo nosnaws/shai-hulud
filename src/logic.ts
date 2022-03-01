@@ -7,10 +7,13 @@ import { log } from "./utils/general";
 
 const logger = getLogger();
 export function info(): InfoResponse {
+  // sand for prod
+  // purple for dev
+  const color = process.env.NODE_ENV === "production" ? "#e3a86d" : "#8428a6";
   const response: InfoResponse = {
     apiversion: "1",
     author: "nosnaws",
-    color: "#e3a86d",
+    color,
     head: "sand-worm",
     tail: "bolt",
   };

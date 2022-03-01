@@ -1,9 +1,13 @@
-import { determineMove, voronoi, alphabeta } from "../src/lookahead_snake";
+import {
+  determineMove,
+  voronoi,
+  minmax,
+  IDSMinMax,
+} from "../src/lookahead_snake";
 import { createBoard, createGameState, createSnake } from "./utils";
-import { createGrid } from "../src/utils/board";
 import { resolveTurn } from "../src/utils/game_sim";
 
-describe("alphabeta", () => {
+describe("lookahead_snake", () => {
   describe("voronoi", () => {
     it("returns count for 1 snake", () => {
       // _ _ _
@@ -38,10 +42,7 @@ describe("alphabeta", () => {
       expect(count).toBe(15);
     });
   });
-
-  describe("determineMove", () => {
-    // TODO: These types of move requests are taking a very long way to process
-    // need to figure out why, because these requests should not be increasing the pathfinding by so much
+  describe("minmax", () => {
     it("returns move in under 100ms, 2 food", () => {
       const snake = createSnake([
         { x: 9, y: 10 },
@@ -64,7 +65,7 @@ describe("alphabeta", () => {
       );
 
       const time = Date.now();
-      const move = determineMove(gameState);
+      const move = minmax(gameState, snake.head, 4, -Infinity, Infinity, true);
       expect(Date.now() - time).toBeLessThan(100);
     });
     it("returns move in under 100ms, 1 food", () => {
@@ -82,7 +83,7 @@ describe("alphabeta", () => {
       );
 
       const time = Date.now();
-      const move = determineMove(gameState);
+      const move = minmax(gameState, snake.head, 4, -Infinity, Infinity, true);
       expect(Date.now() - time).toBeLessThan(200);
     });
     it("returns move in under 100ms, 2 food - 2 snakes", () => {
@@ -116,7 +117,7 @@ describe("alphabeta", () => {
       );
 
       const time = Date.now();
-      const move = determineMove(gameState);
+      const move = minmax(gameState, snake1.head, 4, -Infinity, Infinity, true);
       expect(Date.now() - time).toBeLessThan(200);
     });
 
@@ -171,10 +172,146 @@ describe("alphabeta", () => {
       );
 
       const time = Date.now();
-      const move = determineMove(gameState);
+      const move = minmax(gameState, snake1.head, 4, -Infinity, Infinity, true);
       expect(Date.now() - time).toBeLessThan(400);
     });
+  });
 
+  describe("IDSMinMax", () => {
+    it("returns move in under 100ms, 2 food", () => {
+      const snake = createSnake([
+        { x: 9, y: 10 },
+        { x: 9, y: 9 },
+        { x: 9, y: 8 },
+        { x: 9, y: 7 },
+        { x: 8, y: 7 },
+        { x: 7, y: 7 },
+      ]);
+      const gameState = createGameState(
+        createBoard(
+          11,
+          [
+            { x: 1, y: 10 },
+            { x: 2, y: 10 },
+          ],
+          [snake]
+        ),
+        snake
+      );
+
+      const time = Date.now();
+      const move = IDSMinMax(gameState, time, 50);
+      expect(Date.now() - time).toBeLessThan(100);
+    });
+    it("returns move in under 100ms, 1 food", () => {
+      const snake = createSnake([
+        { x: 9, y: 10 },
+        { x: 9, y: 9 },
+        { x: 9, y: 8 },
+        { x: 9, y: 7 },
+        { x: 8, y: 7 },
+        { x: 7, y: 7 },
+      ]);
+      const gameState = createGameState(
+        createBoard(11, [{ x: 1, y: 10 }], [snake]),
+        snake
+      );
+
+      const time = Date.now();
+      const move = IDSMinMax(gameState, time, 50);
+      expect(Date.now() - time).toBeLessThan(100);
+    });
+    it("returns move in under 100ms, 2 food - 2 snakes", () => {
+      const snake1 = createSnake([
+        { x: 9, y: 10 },
+        { x: 9, y: 9 },
+        { x: 9, y: 8 },
+        { x: 9, y: 7 },
+        { x: 8, y: 7 },
+        { x: 7, y: 7 },
+      ]);
+      const snake2 = createSnake([
+        { x: 0, y: 10 },
+        { x: 0, y: 9 },
+        { x: 0, y: 8 },
+        { x: 0, y: 7 },
+        { x: 0, y: 7 },
+        { x: 0, y: 7 },
+      ]);
+
+      const gameState = createGameState(
+        createBoard(
+          11,
+          [
+            { x: 1, y: 10 },
+            { x: 2, y: 10 },
+          ],
+          [snake1, snake2]
+        ),
+        snake1
+      );
+
+      const time = Date.now();
+      const move = IDSMinMax(gameState, time, 100);
+      expect(Date.now() - time).toBeLessThan(200);
+    });
+
+    it("returns move in under 400ms, 2 food - 4 snakes", () => {
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ w w _ _
+      // _ _ _ _ _ _ _ _ w _ _
+      // s s h _ _ _ _ _ _ _ _
+      // s _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ _ _ _ _ _
+      // _ _ _ _ _ _ e e e _ _
+      // _ _ r _ _ _ e _ _ _ _
+      // _ _ r _ _ _ e _ _ _ _
+      // _ r r _ _ _ e _ _ _ _
+      const snake1 = createSnake([
+        { x: 2, y: 6 },
+        { x: 1, y: 6 },
+        { x: 0, y: 6 },
+        { x: 0, y: 5 },
+      ]);
+      const snake2 = createSnake([
+        { x: 8, y: 3 },
+        { x: 7, y: 3 },
+        { x: 6, y: 3 },
+        { x: 6, y: 2 },
+        { x: 6, y: 1 },
+        { x: 6, y: 0 },
+      ]);
+      const snake3 = createSnake([
+        { x: 2, y: 2 },
+        { x: 2, y: 1 },
+        { x: 2, y: 0 },
+        { x: 1, y: 0 },
+      ]);
+      const snake4 = createSnake([
+        { x: 7, y: 8 },
+        { x: 8, y: 8 },
+        { x: 8, y: 7 },
+      ]);
+      const gameState = createGameState(
+        createBoard(
+          11,
+          [
+            { x: 1, y: 10 },
+            { x: 2, y: 10 },
+            { x: 5, y: 0 },
+          ],
+          [snake1, snake2, snake3, snake4]
+        ),
+        snake1
+      );
+
+      const time = Date.now();
+      const move = IDSMinMax(gameState, time, 150);
+      expect(Date.now() - time).toBeLessThan(400);
+    });
+  });
+  describe("determineMove", () => {
     it("chooses to eat food", () => {
       const snake = createSnake(
         [
@@ -380,8 +517,8 @@ describe("alphabeta", () => {
         { x: 4, y: 2 },
       ]);
       const gameState = createGameState(createBoard(5, [], [me, other]), me);
-      const move = determineMove(gameState);
-      expect(move).toEqual({ x: 4, y: 2 });
+      const move = minmax(gameState, me.head, 2, -Infinity, Infinity, true);
+      expect(move.move).toEqual({ x: 4, y: 2 });
     });
 
     it("does not choose path through moving tail if snake did eat", () => {
@@ -745,7 +882,7 @@ describe("alphabeta", () => {
           { x: 4, y: 1 },
           { x: 4, y: 0 },
         ],
-        { health: 16 }
+        { health: 15 }
       );
       const hazards = [{ x: 4, y: 3 }];
       const gameState = createGameState(
@@ -792,14 +929,7 @@ describe("alphabeta", () => {
       );
       const state = resolveTurn(gameState);
       console.log(JSON.stringify(state, null, 2));
-      const score = alphabeta(
-        state,
-        state.you.head,
-        2,
-        -Infinity,
-        Infinity,
-        true
-      );
+      const score = minmax(state, state.you.head, 2, -Infinity, Infinity, true);
       expect(score.score).toBe(-Infinity);
     });
 
@@ -837,14 +967,7 @@ describe("alphabeta", () => {
       );
       const state = resolveTurn(gameState);
       console.log(JSON.stringify(state, null, 2));
-      const score = alphabeta(
-        state,
-        state.you.head,
-        2,
-        -Infinity,
-        Infinity,
-        true
-      );
+      const score = minmax(state, state.you.head, 2, -Infinity, Infinity, true);
       expect(score.score).toBe(Infinity);
     });
   });

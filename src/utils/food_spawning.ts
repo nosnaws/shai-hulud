@@ -34,7 +34,7 @@ const placeFoodFixed = (gs: GameState) => {
 
   // Place 1 food within exactly 2 moves of each snake, but never towards the center
   for (const snake of gs.board.snakes) {
-    const snakeHead = snake.body[0];
+    const snakeHead = snake.head;
     const possibleFoodLocations = [
       { x: snakeHead.x - 1, y: snakeHead.y - 1 },
       { x: snakeHead.x - 1, y: snakeHead.y + 1 },

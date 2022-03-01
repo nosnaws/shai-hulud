@@ -23,8 +23,106 @@ describe("game_sim", () => {
       expect(gs.board.snakes[0].length).toBe(3); //length doesn't change unless we eat
     });
   });
+  describe("cloneGameState", () => {
+    it("clones game state", () => {
+      const s = createSnake([
+        { x: 0, y: 0 },
+        { x: 0, y: 0 },
+        { x: 0, y: 0 },
+      ]);
+      const board = createBoard(3, [], [s]);
+      const gs = createGameState(board, s);
+      expect(cloneGameState(gs)).toEqual(gs);
+    });
+  });
 
   describe("resolveTurn", () => {
+    it("does not throw errors", () => {
+      const s = createSnake(
+        [
+          {
+            y: 4,
+            x: 5,
+          },
+          {
+            y: 3,
+            x: 5,
+          },
+          {
+            y: 2,
+            x: 5,
+          },
+        ],
+        { health: 98 }
+      );
+      const s2 = createSnake(
+        [
+          {
+            y: 9,
+            x: 0,
+          },
+          {
+            y: 10,
+            x: 0,
+          },
+          {
+            y: 10,
+            x: 1,
+          },
+          {
+            y: 9,
+            x: 1,
+          },
+        ],
+        { health: 10 }
+      );
+      const s3 = createSnake(
+        [
+          {
+            y: 6,
+            x: 5,
+          },
+          {
+            y: 7,
+            x: 5,
+          },
+          {
+            y: 8,
+            x: 5,
+          },
+        ],
+        { health: 10 }
+      );
+      const food = [
+        {
+          y: 0,
+          x: 6,
+        },
+        {
+          y: 10,
+          x: 4,
+        },
+        {
+          y: 5,
+          x: 5,
+        },
+        {
+          y: 9,
+          x: 2,
+        },
+      ];
+      const board = createBoard(11, food, [s, s2, s3]);
+      const gs = createGameState(board, s);
+      const sMove = { x: 5, y: 6 };
+      const s2Move = { x: 4, y: 7 };
+      const s3Move = { x: 3, y: 9 };
+      addMove(gs, s, sMove);
+      addMove(gs, s2, s2Move);
+      addMove(gs, s3, s3Move);
+      const ns = resolveTurn(gs);
+      expect(ns.board.snakes).toHaveLength(2);
+    });
+
     it("snake moves", () => {
       const s = createSnake([
         { x: 0, y: 0 },
@@ -101,6 +199,7 @@ describe("game_sim", () => {
       makeMove(gs, s, newMove);
       const ns = resolveTurn(gs);
       expect(ns.board.snakes).toHaveLength(0);
+      expect(ns.you).toBeDefined();
     });
 
     it("snakes goes out of bounds", () => {

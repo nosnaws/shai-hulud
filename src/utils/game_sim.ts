@@ -19,9 +19,7 @@ export const resolveTurn = (gs: GameStateSim): GameStateSim => {
     //log(`snake:${pm.snake.id} move:${pm.move.x},${pm.move.y}`);
     makeMove(ns, pm.snake, pm.move);
   }
-  //printGrid(ns.grid);
-  //log(`head:${ns.you.head.x},${ns.you.head.y}`);
-  //log(`reducing health and removing tail`);
+
   // remove tails and reduce health
   ns.board.snakes = ns.board.snakes.map((s) => {
     const isHazard = ns.board.hazards.some(isCoordEqual(s.head));
@@ -97,7 +95,7 @@ export const resolveTurn = (gs: GameStateSim): GameStateSim => {
     printGrid(updateForPrint.grid);
   }
 
-  return ns;
+  return cloneGameState(ns);
 };
 
 export const addMove = (

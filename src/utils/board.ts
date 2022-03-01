@@ -102,10 +102,10 @@ export const getMoves = (
   body: Coord[],
   isWrapped: boolean
 ): Node[] => {
-  //const [head, neck] = body;
-  //const neighbors = getNeighbors(grid, isWrapped)(head);
-  //return neighbors.filter((n) => !isCoordEqual(neck)(n.coord)); // filter out neck, so going backwards isn't an option
-  return getNeighbors(grid, isWrapped)(body[0]);
+  const [head, neck] = body;
+  const neighbors = getNeighbors(grid, isWrapped)(head);
+  return neighbors.filter((n) => !isCoordEqual(neck)(n.coord)); // filter out neck, so going backwards isn't an option
+  //return getNeighbors(grid, isWrapped)(body[0]);
 };
 
 export const getNeighbors = (grid: Grid, isWrapped: boolean = false) => ({
