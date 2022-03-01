@@ -457,7 +457,7 @@ export const determineMove = (state: GameState, depth: number = 2): Coord => {
   //})
   //.map((m) => alphabeta(ns, m.coord, depth, -Infinity, Infinity, true))
   //.sort((a, b) => b.score - a.score);
-  const move = IDSMinMax(ns, Date.now(), 150);
+  const move = IDSMinMax(ns, Date.now(), 100);
   //const move = minmax(ns, ns.you.head, 3, -Infinity, Infinity, true);
   log(move.move);
   log(move.score);
