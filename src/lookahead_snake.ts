@@ -26,7 +26,7 @@ import { createQueue, Queue } from "./utils/queue";
 import { HAZARD_DAMAGE } from "./constants";
 const coordStr = (c: Coord) => `${c?.x},${c?.y}`;
 
-const LOG_MINMAX = true;
+const LOG_MINMAX = false;
 export const voronoi = (gs: GameStateSim): number => {
   interface Pair {
     snakeHead: Coord;
@@ -137,6 +137,7 @@ const stateHeuristic = (gs: GameStateSim): number => {
     }
   }
 
+  //total += 1000 * you.length;
   total += 10000 / otherSnakes.length ?? 1;
   const foodPaths = board.food
     .map((f) => BFS(grid, you.head, f))
@@ -157,7 +158,11 @@ const stateHeuristic = (gs: GameStateSim): number => {
       const pathCost =
         hazardsInPath > 0 ? hazardsInPath * HAZARD_DAMAGE + 1 : 1;
 
-      total += a * Math.atan(you.health - (foodPath.length * pathCost) / b);
+      const foodScore =
+        a * Math.atan(you.health - (foodPath.length * pathCost) / b);
+      if (foodScore > 0) {
+        total += foodScore;
+      }
     }
   }
 
@@ -216,7 +221,8 @@ export const minmax = (
   depth: number,
   alpha: number,
   beta: number,
-  maximizingPlayer: boolean
+  maximizingPlayer: boolean,
+  shouldEnd: () => boolean = () => false
 ): { score: number; move: Coord; gs: GameStateSim } => {
   const printState = (s: GameStateSim, value: number) =>
     log(
@@ -243,7 +249,7 @@ export const minmax = (
   //log("wat");
   //}
 
-  if (depth < 1 || isGameOver(gs)) {
+  if (depth < 1 || isGameOver(gs) || shouldEnd()) {
     //const h = nodeHeuristic(ns.grid, ns, ns.grid[ns.you.head.y][ns.you.head.x]);
     const h = stateHeuristic(gs);
     //log({ score: h, move });
@@ -263,7 +269,15 @@ export const minmax = (
       addMove(ns, you, pm.coord);
 
       const moveH = pathHeuristic(ns, pm.coord);
-      const min = minmax(ns, pm.coord, depth - 1, alpha, beta, false);
+      const min = minmax(
+        ns,
+        pm.coord,
+        depth - 1,
+        alpha,
+        beta,
+        false,
+        shouldEnd
+      );
 
       //const = moveH + Math.max(value, next.score);
 
@@ -339,7 +353,15 @@ export const minmax = (
 
         const nextTurn = resolveTurn(ns);
 
-        const max = minmax(nextTurn, move, depth - 1, alpha, beta, true);
+        const max = minmax(
+          nextTurn,
+          move,
+          depth - 1,
+          alpha,
+          beta,
+          true,
+          shouldEnd
+        );
         //value = Math.min(value, max.score);
         if (max.score < value) {
           log(
@@ -360,7 +382,15 @@ export const minmax = (
       // for solo
       const ns = cloneGameState(gs);
       const nextTurn = resolveTurn(ns);
-      const max = minmax(nextTurn, move, depth - 1, alpha, beta, true);
+      const max = minmax(
+        nextTurn,
+        move,
+        depth - 1,
+        alpha,
+        beta,
+        true,
+        shouldEnd
+      );
       //value = Math.min(value, max.score);
       if (max.score < value) {
         value = max.score;
@@ -382,7 +412,8 @@ export const IDSMinMax = (
   currentTime: number,
   duration: number
 ): { score: number; move: Coord } => {
-  let currentDepth = 5;
+  let currentDepth = 1;
+  const shouldEnd = () => Date.now() - currentTime > duration;
 
   log(`IDS start`);
   log(`start depth:${currentDepth}`);
@@ -392,12 +423,13 @@ export const IDSMinMax = (
     currentDepth,
     -Infinity,
     Infinity,
-    true
+    true,
+    shouldEnd
   );
   log(`end depth:${currentDepth}`);
   currentDepth = currentDepth + 1;
 
-  while (Date.now() - currentTime < duration) {
+  while (!shouldEnd()) {
     log(`start IDS depth ${currentDepth}`);
     const currentMove = minmax(
       lastMove.gs,
@@ -405,7 +437,8 @@ export const IDSMinMax = (
       currentDepth,
       -Infinity,
       Infinity,
-      true
+      true,
+      shouldEnd
     );
 
     log(`end IDS depth:${currentDepth}`);
@@ -457,7 +490,7 @@ export const determineMove = (state: GameState, depth: number = 2): Coord => {
   //})
   //.map((m) => alphabeta(ns, m.coord, depth, -Infinity, Infinity, true))
   //.sort((a, b) => b.score - a.score);
-  const move = IDSMinMax(ns, Date.now(), 50);
+  const move = IDSMinMax(ns, Date.now(), 150);
   //const move = minmax(ns, ns.you.head, 3, -Infinity, Infinity, true);
   log(move.move);
   log(move.score);
