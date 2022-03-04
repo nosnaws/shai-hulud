@@ -23,6 +23,13 @@ app.post("/move", (req: Request, res: Response) => {
 });
 
 app.post("/end", (req: Request, res: Response) => {
+  newrelic.addCustomAttributes({
+    winnerId: req.body.board.snakes[0]?.id ?? null,
+    winnerName: req.body.board.snakes[0]?.name ?? null,
+    totalTurns: req.body.turn,
+    gameLink: `https://play.battlesnake.com/g/${req.body.game.id}`,
+    gameType: req.body.game.ruleset.name,
+  });
   res.send(end(req.body));
 });
 
