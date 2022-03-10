@@ -160,9 +160,9 @@ const stateHeuristic = (gs: GameStateSim): number => {
 
       const foodScore =
         a * Math.atan(you.health - (foodPath.length * pathCost) / b);
-      if (foodScore > 0) {
-        total += foodScore;
-      }
+      //if (foodScore > 0) {
+      total += foodScore;
+      //}
     }
   }
 
