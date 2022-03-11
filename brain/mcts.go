@@ -29,7 +29,6 @@ type State struct {
 	rs           gameSim.Ruleset
 	you          *gameSim.Snake
 	visitedCount int32
-	score        int32
 	scores       map[string]int32
 }
 
@@ -110,7 +109,7 @@ func createNode(parent *Node, bs gameSim.BoardState, rs gameSim.Ruleset, you *ga
 		scores[s.ID] = 0
 	}
 
-	state := State{bs: bs, rs: rs, you: you, visitedCount: 0, score: 0, scores: scores}
+	state := State{bs: bs, rs: rs, you: you, visitedCount: 0, scores: scores}
 	var children []*Node
 	return Node{state: state, parent: parent, children: children, move: move, played: false}
 }
