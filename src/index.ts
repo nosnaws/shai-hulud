@@ -1,6 +1,9 @@
 import newrelic from "newrelic";
 // @ts-ignore
-import getCustomAttributes from "../utils/getCustomAttributes.js";
+import {
+  getCustomAttributes,
+  getCustomAttributesEnd,
+} from "../utils/getCustomAttributes.js";
 import express, { Request, Response } from "express";
 import { info, start, move, end } from "./logic";
 
@@ -23,14 +26,7 @@ app.post("/move", (req: Request, res: Response) => {
 });
 
 app.post("/end", (req: Request, res: Response) => {
-  newrelic.addCustomAttributes({
-    winnerId: req.body.board.snakes[0]?.id ?? null,
-    winnerName: req.body.board.snakes[0]?.name ?? null,
-    isWin: req.body.board.snakes[0]?.name === "shai-hulud",
-    totalTurns: req.body.turn,
-    gameLink: `https://play.battlesnake.com/g/${req.body.game.id}`,
-    gameType: req.body.game.ruleset.name,
-  });
+  newrelic.addCustomAttributes(getCustomAttributesEnd("shai-hulud", req.body));
   res.send(end(req.body));
 });
 

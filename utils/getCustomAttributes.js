@@ -86,4 +86,33 @@ const getCustomAttributes = ({ game, board, turn, you }) => {
   };
 };
 
-module.exports = getCustomAttributes;
+/**
+ * @param {Object} data - The game state provided in the POST request
+ * @param {Object} data.game
+ * @param {string} data.game.id
+ * @param {{ name: string }} data.game.ruleset
+ * @param {number} data.turn
+ * @param {Board} data.board
+ * @param {Battlesnake} data.you
+ */
+const getCustomAttributesEnd = (mySnakeName, { game, board, turn, you }) => {
+  const snakes = board.snakes;
+
+  return {
+    snakeGameId: game.id,
+    snakeRules: game.ruleset.name,
+    snakeTurn: turn,
+
+    snakeName: you.name,
+    snakeId: you.id,
+    snakeHealth: you.health,
+    snakeLength: you.length,
+
+    snakeGameWinnerName: snakes.length > 0 ? snakes[0].name : null,
+    snakeGameWinnerId: snakes.length > 0 ? snakes[0].id : null,
+    snakeGameIsWin: snakes.length > 0 ? snakes[0].name === mySnakeName : false,
+    snakeGameReplayLink: `https://play.battlesnake.com/g/${game.id}`,
+  };
+};
+
+module.exports = { getCustomAttributes, getCustomAttributesEnd };
