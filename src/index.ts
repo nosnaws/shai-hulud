@@ -1,8 +1,8 @@
 import newrelic from "newrelic";
-// @ts-ignore
 import {
   getCustomAttributes,
   getCustomAttributesEnd,
+  // @ts-ignore
 } from "../utils/getCustomAttributes.js";
 import express, { Request, Response } from "express";
 import { info, start, move, end } from "./logic";
