@@ -1,3 +1,4 @@
+import nr from "newrelic";
 import { InfoResponse, GameState, MoveResponse, Coord, Board } from "./types";
 import getLogger from "./logger";
 import { isCoordEqual } from "./utils/board";

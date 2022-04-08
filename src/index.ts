@@ -1,11 +1,11 @@
 import newrelic from "newrelic";
+import express, { Request, Response } from "express";
+import { info, start, move, end } from "./logic";
 import {
   getCustomAttributes,
   getCustomAttributesEnd,
   // @ts-ignore
-} from "../utils/getCustomAttributes.js";
-import express, { Request, Response } from "express";
-import { info, start, move, end } from "./logic";
+} from "./quickstart-attributes.js";
 
 const app = express();
 app.use(express.json());
@@ -26,7 +26,7 @@ app.post("/move", (req: Request, res: Response) => {
 });
 
 app.post("/end", (req: Request, res: Response) => {
-  newrelic.addCustomAttributes(getCustomAttributesEnd("shai-hulud", req.body));
+  newrelic.addCustomAttributes(getCustomAttributesEnd(req.body));
   res.send(end(req.body));
 });
 

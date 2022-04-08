@@ -1,3 +1,4 @@
+import nr from "newrelic";
 import { Battlesnake, Coord, GameState } from "./types";
 import { prop } from "./utils/general";
 import {
@@ -226,23 +227,6 @@ export const minmax = (
 
   const { you, grid, board, isWrapped } = gs;
 
-  //if (isGameOver(gs)) {
-  //log("game over");
-  //if (didWeWinBoys(gs, gs.you)) {
-  //printGrid(gs.grid);
-  //log("we win");
-  //log({ score: Infinity, move: you.head });
-  //return { score: Infinity, move: you.head };
-  //}
-  //if (didWeLoseSadBoys(gs, gs.you)) {
-  //printGrid(gs.grid);
-  //log("we lost");
-  //log({ score: -Infinity, move: you.head });
-  //return { score: -Infinity, move: you.head };
-  //}
-  //log("wat");
-  //}
-
   if (depth < 1 || isGameOver(gs)) {
     //const h = nodeHeuristic(ns.grid, ns, ns.grid[ns.you.head.y][ns.you.head.x]);
     const h = stateHeuristic(gs);
@@ -255,8 +239,10 @@ export const minmax = (
     let bestGS = gs;
 
     const n = getMoves(grid, you.body, isWrapped);
+
     log(`moves at depth:${depth}`, LOG_MINMAX);
     log(n, LOG_MINMAX);
+
     for (const pm of n) {
       const ns = cloneGameState(gs);
       log(`testing move:${coordStr(pm.coord)} depth:${depth}`, LOG_MINMAX);
@@ -264,8 +250,6 @@ export const minmax = (
 
       const moveH = pathHeuristic(ns, pm.coord);
       const min = minmax(ns, pm.coord, depth - 1, alpha, beta, false);
-
-      //const = moveH + Math.max(value, next.score);
 
       if (moveH < 0) {
         log(
