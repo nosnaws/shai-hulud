@@ -229,7 +229,7 @@ export const minmax = (
 
   if (depth < 1 || isGameOver(gs)) {
     //const h = nodeHeuristic(ns.grid, ns, ns.grid[ns.you.head.y][ns.you.head.x]);
-    const h = stateHeuristic(gs);
+    const h = nr.startSegment("stateHeuristic", true, () => stateHeuristic(gs));
     //log({ score: h, move });
     return { score: h, move, gs };
   }
@@ -248,8 +248,12 @@ export const minmax = (
       log(`testing move:${coordStr(pm.coord)} depth:${depth}`, LOG_MINMAX);
       addMove(ns, you, pm.coord);
 
-      const moveH = pathHeuristic(ns, pm.coord);
-      const min = minmax(ns, pm.coord, depth - 1, alpha, beta, false);
+      const moveH = nr.startSegment("pathHeuristics", true, () =>
+        pathHeuristic(ns, pm.coord)
+      );
+      const min = nr.startSegment("minmax", true, () =>
+        minmax(ns, pm.coord, depth - 1, alpha, beta, false)
+      );
 
       if (moveH < 0) {
         log(
@@ -323,7 +327,9 @@ export const minmax = (
 
         const nextTurn = resolveTurn(ns);
 
-        const max = minmax(nextTurn, move, depth - 1, alpha, beta, true);
+        const max = nr.startSegment("minmax", true, () =>
+          minmax(nextTurn, move, depth - 1, alpha, beta, true)
+        );
         //value = Math.min(value, max.score);
         if (max.score < value) {
           log(
@@ -344,7 +350,9 @@ export const minmax = (
       // for solo
       const ns = cloneGameState(gs);
       const nextTurn = resolveTurn(ns);
-      const max = minmax(nextTurn, move, depth - 1, alpha, beta, true);
+      const max = nr.startSegment("minmax", true, () =>
+        minmax(nextTurn, move, depth - 1, alpha, beta, true)
+      );
       //value = Math.min(value, max.score);
       if (max.score < value) {
         value = max.score;
@@ -370,26 +378,23 @@ export const IDSMinMax = (
 
   log(`IDS start`);
   log(`start depth:${currentDepth}`);
-  let lastMove = minmax(
-    gs,
-    gs.you.head,
-    currentDepth,
-    -Infinity,
-    Infinity,
-    true
+  let lastMove = nr.startSegment("minmax", true, () =>
+    minmax(gs, gs.you.head, currentDepth, -Infinity, Infinity, true)
   );
   log(`end depth:${currentDepth}`);
   currentDepth = currentDepth + 1;
 
   while (Date.now() - currentTime < duration) {
     log(`start IDS depth ${currentDepth}`);
-    const currentMove = minmax(
-      lastMove.gs,
-      lastMove.gs.you.head,
-      currentDepth,
-      -Infinity,
-      Infinity,
-      true
+    const currentMove = nr.startSegment("minmax", true, () =>
+      minmax(
+        lastMove.gs,
+        lastMove.gs.you.head,
+        currentDepth,
+        -Infinity,
+        Infinity,
+        true
+      )
     );
 
     log(`end IDS depth:${currentDepth}`);
@@ -441,7 +446,9 @@ export const determineMove = (state: GameState, depth: number = 2): Coord => {
   //})
   //.map((m) => alphabeta(ns, m.coord, depth, -Infinity, Infinity, true))
   //.sort((a, b) => b.score - a.score);
-  const move = IDSMinMax(ns, Date.now(), 50);
+  const move = nr.startSegment("IDSMinMax", true, () =>
+    IDSMinMax(ns, Date.now(), 50)
+  );
   //const move = minmax(ns, ns.you.head, 3, -Infinity, Infinity, true);
   log(move.move);
   log(move.score);
