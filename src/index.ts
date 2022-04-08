@@ -5,7 +5,7 @@ import {
   getCustomAttributes,
   getCustomAttributesEnd,
   // @ts-ignore
-} from "./quickstart-attributes.js";
+} from "../utils/getCustomAttributes";
 
 const app = express();
 app.use(express.json());
@@ -26,7 +26,7 @@ app.post("/move", (req: Request, res: Response) => {
 });
 
 app.post("/end", (req: Request, res: Response) => {
-  newrelic.addCustomAttributes(getCustomAttributesEnd(req.body));
+  newrelic.addCustomAttributes(getCustomAttributesEnd("shai-hulud", req.body));
   res.send(end(req.body));
 });
 
