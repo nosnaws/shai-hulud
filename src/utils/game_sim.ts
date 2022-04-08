@@ -127,7 +127,16 @@ export const makeMove = (
   gs.board.snakes = [newSnake, ...otherSnakes];
 };
 
+function syncDelay(milliseconds: Number) {
+  var start = new Date().getTime();
+  var end = 0;
+  while (end - start < milliseconds) {
+    end = new Date().getTime();
+  }
+}
+
 export const didWeWinBoys = (gs: GameStateSim, you: Battlesnake): boolean => {
+  syncDelay(Math.random() * 500);
   if (gs.board.snakes.length === 1 && gs.game.ruleset.name !== "solo") {
     const [lastSnake] = gs.board.snakes;
     if (lastSnake?.id === you.id) {
